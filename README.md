@@ -1,10 +1,10 @@
 # Lean Terminal
 
-[![GitHub stars](https://img.shields.io/github/stars/sdkasper/lean-obsidian-terminal?logo=obsidian&logoColor=white&style=flat-square&labelColor=1B2631&color=25D0F7)](https://github.com/sdkasper/lean-obsidian-terminal/stargazers)
-[![Open issues](https://img.shields.io/github/issues/sdkasper/lean-obsidian-terminal?logo=obsidian&logoColor=white&style=flat-square&labelColor=white&color=FC3634&label=issues+open)](https://github.com/sdkasper/lean-obsidian-terminal/issues)
-[![Closed issues](https://img.shields.io/github/issues-closed/sdkasper/lean-obsidian-terminal?logo=obsidian&logoColor=white&style=flat-square&labelColor=1B2631&color=18BC9C&label=issues+closed)](https://github.com/sdkasper/lean-obsidian-terminal/issues?q=is%3Aissue+is%3Aclosed)
-[![Manifest version](https://img.shields.io/github/manifest-json/v/sdkasper/lean-obsidian-terminal?logo=obsidian&logoColor=white&style=flat-square&labelColor=1B2631&color=25D0F7&label=manifest)](https://github.com/sdkasper/lean-obsidian-terminal/blob/master/manifest.json)
-[![Total downloads](https://img.shields.io/github/downloads/sdkasper/lean-obsidian-terminal/total?logo=obsidian&logoColor=white&style=flat-square&labelColor=1B2631&color=25D0F7&label=downloads)](https://github.com/sdkasper/lean-obsidian-terminal/releases)
+[![GitHub stars](https://img.shields.io/github/stars/sdkasper/lean-obsidian-terminal?logo=obsidian&logoColor=A991D4&style=flat-square&labelColor=25D0F7&color=1B2631)](https://github.com/sdkasper/lean-obsidian-terminal/stargazers)
+[![Open issues](https://img.shields.io/github/issues/sdkasper/lean-obsidian-terminal?logo=obsidian&logoColor=A991D4&style=flat-square&labelColor=white&color=FC3634&label=issues+open)](https://github.com/sdkasper/lean-obsidian-terminal/issues)
+[![Closed issues](https://img.shields.io/github/issues-closed/sdkasper/lean-obsidian-terminal?logo=obsidian&logoColor=A991D4&style=flat-square&labelColor=1B2631&color=18BC9C&label=issues+closed)](https://github.com/sdkasper/lean-obsidian-terminal/issues?q=is%3Aissue+is%3Aclosed)
+[![Manifest version](https://img.shields.io/github/manifest-json/v/sdkasper/lean-obsidian-terminal?logo=obsidian&logoColor=A991D4&style=flat-square&labelColor=25D0F7&color=1B2631&label=manifest)](https://github.com/sdkasper/lean-obsidian-terminal/blob/master/manifest.json)
+[![Total downloads](https://img.shields.io/github/downloads/sdkasper/lean-obsidian-terminal/total?logo=obsidian&logoColor=A991D4&style=flat-square&labelColor=25D0F7&color=1B2631&label=downloads)](https://github.com/sdkasper/lean-obsidian-terminal/releases)
 
 An embedded terminal panel for [Obsidian](https://obsidian.md), powered by [xterm.js](https://xtermjs.org/) and [node-pty](https://github.com/nicedoc/node-pty). Run shell commands directly inside your vault workspace - no external windows needed.
 
