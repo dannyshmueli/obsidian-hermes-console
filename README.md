@@ -28,7 +28,7 @@ An embedded terminal panel for [Obsidian](https://obsidian.md), powered by [xter
 - Customizable ribbon and panel tab icon (any Lucide icon name)
 - Clickable URLs in terminal output
 - Auto-resize on panel resize
-- Opens at vault root by default
+- Opens at vault root by default; command palette command to open in the current file's folder; right-click any file or folder in the file explorer to open a terminal there
 - Clipboard support: Ctrl+V / Cmd+V paste, Ctrl+C / Cmd+C copy (with selection)
 - Notification sounds when background tab commands finish (4 sound types, adjustable volume)
 - Shift+Enter inserts a newline instead of submitting (muscle memory friendly for Claude Code users)
@@ -71,6 +71,8 @@ An embedded terminal panel for [Obsidian](https://obsidian.md), powered by [xter
 | Drop file path | Drag a file from the file explorer or Windows Explorer into the terminal |
 | Search terminal output | Press **Ctrl+Alt+F** (configurable) to open the search bar |
 | Close tab | Click the **x** on the tab |
+| Open terminal in current file's folder | Command palette: **Open terminal in current file's directory** (only visible when a file is active) |
+| Open terminal in any folder | Right-click a file or folder in the file explorer - **Open terminal here** |
 | Split pane | Command palette: **Open terminal in new pane** |
 | Restore closed tab | Command palette: **Restore recent terminal session** - pick from recently closed tabs (and Claude sessions, if integration enabled) |
 | Refresh Claude session registry | Command palette: **Refresh Claude session registry** - rewrites the registry note (requires Claude integration enabled) |
@@ -125,6 +127,29 @@ Disabled by default. When enabled in settings, the plugin:
 - Includes Claude sessions alongside recently closed tabs in the **Restore recent terminal session** picker, sorted by most recent
 
 Sessions started by typing `claude` manually inside a tab are not auto-tracked, but appear in the picker on its next open (the scan runs fresh each time) - click to resume.
+
+## URI Handler
+
+The plugin registers the `obsidian://lean-terminal` protocol handler, usable from any note link, dashboard button, or external script:
+
+| Parameter | Description | Example |
+|-----------|-------------|---------|
+| `cwd` | Open a terminal tab in the given directory (URL-encoded path) | `obsidian://lean-terminal?cwd=%2Fhome%2Fuser%2Fprojects%2Fmy-app` |
+| `resume` | Open a terminal tab and run `claude --resume <session-id>` once the shell is ready (requires Claude integration enabled) | `obsidian://lean-terminal?resume=<uuid>` |
+
+The `cwd` parameter is useful for dashboards and launchers. In an Obsidian note with Dataview JS or a custom button plugin:
+
+```js
+app.workspace.openLinkText("obsidian://lean-terminal?cwd=" + encodeURIComponent("/path/to/project"), "");
+```
+
+Or as a plain Markdown link (paths must be URL-encoded):
+
+```markdown
+[Open project terminal](obsidian://lean-terminal?cwd=%2Fpath%2Fto%2Fproject)
+```
+
+If the terminal panel is already open, the URI opens a new tab in the target directory. If it is closed, a fresh panel opens there.
 
 ## Security
 

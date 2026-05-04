@@ -1,4 +1,4 @@
-import { FileSystemAdapter, Plugin, WorkspaceLeaf, setIcon } from "obsidian";
+import { FileSystemAdapter, Plugin, TFolder, WorkspaceLeaf, setIcon } from "obsidian";
 import { VIEW_TYPE_TERMINAL } from "./constants";
 import { TerminalView } from "./terminal-view";
 import { TerminalSettingTab, DEFAULT_SETTINGS, type TerminalPluginSettings } from "./settings";
@@ -75,6 +75,16 @@ export default class TerminalPlugin extends Plugin {
     });
 
     this.addCommand({
+      id: "open-terminal-here",
+      name: "Open terminal in current file's directory",
+      checkCallback: (checking) => {
+        if (!this.app.workspace.getActiveFile()) return false;
+        if (!checking) void this.openTerminalHere();
+        return true;
+      },
+    });
+
+    this.addCommand({
       id: "restore-recent-terminal-session",
       name: "Restore recent terminal session",
       callback: () => void openRecentSessionPicker(this),
@@ -137,6 +147,8 @@ export default class TerminalPlugin extends Plugin {
     this.registerObsidianProtocolHandler("lean-terminal", (params) => {
       if (params.resume) {
         void resumeClaudeSession(this, params.resume);
+      } else if (params.cwd) {
+        void this.openTerminalAt(decodeURIComponent(params.cwd));
       }
     });
 
@@ -146,6 +158,25 @@ export default class TerminalPlugin extends Plugin {
     // Flush any pending layout save before Obsidian quits. Without this, a
     // typed-then-quickly-quit scenario loses the last few seconds of activity
     // because Obsidian's requestSaveLayout is debounced.
+    this.registerEvent(
+      this.app.workspace.on("file-menu", (menu, abstractFile) => {
+        const vaultRelDir = abstractFile instanceof TFolder
+          ? abstractFile.path
+          : abstractFile.parent?.path ?? "";
+        const pathMod = window.require("path") as typeof import("path");
+        const adapter = this.app.vault.adapter as FileSystemAdapter;
+        const cwd = vaultRelDir
+          ? pathMod.join(adapter.getBasePath(), vaultRelDir)
+          : adapter.getBasePath();
+        menu.addItem((item) =>
+          item
+            .setTitle("Open terminal here")
+            .setIcon("terminal")
+            .onClick(() => void this.openTerminalAt(cwd))
+        );
+      })
+    );
+
     this.registerEvent(
       this.app.workspace.on("quit", () => {
         void this.app.workspace.requestSaveLayout.run();
@@ -267,6 +298,49 @@ export default class TerminalPlugin extends Plugin {
     if (count < 2) return;
     const next = ((mgr.getActiveIndex() + delta) + count) % count;
     mgr.switchToIndex(next);
+  }
+
+  private getActiveFileDirCwd(): string | null {
+    const file = this.app.workspace.getActiveFile();
+    if (!file) return null;
+    const path = window.require("path") as typeof import("path");
+    const adapter = this.app.vault.adapter as FileSystemAdapter;
+    const vaultRelDir = file.parent?.path ?? "";
+    return vaultRelDir
+      ? path.join(adapter.getBasePath(), vaultRelDir)
+      : adapter.getBasePath();
+  }
+
+  private async openTerminalAt(cwd: string): Promise<void> {
+    const existing = this.app.workspace.getLeavesOfType(VIEW_TYPE_TERMINAL);
+    if (existing.length > 0) {
+      const view = existing[0].view as TerminalView;
+      void this.app.workspace.revealLeaf(existing[0]);
+      view.createNewTab({ cwd });
+      return;
+    }
+
+    let leaf: WorkspaceLeaf | null;
+    switch (this.settings.defaultLocation) {
+      case "right":       leaf = this.app.workspace.getRightLeaf(false); break;
+      case "tab":         leaf = this.app.workspace.getLeaf("tab"); break;
+      case "split-right": leaf = this.app.workspace.getLeaf("split", "vertical"); break;
+      default:            leaf = this.app.workspace.getLeaf("split", "horizontal"); break;
+    }
+    if (!leaf) return;
+
+    await leaf.setViewState({
+      type: VIEW_TYPE_TERMINAL,
+      active: true,
+      state: { tabs: [{ name: "Terminal 1", color: "", cwd }], activeIndex: 0 },
+    });
+    void this.app.workspace.revealLeaf(leaf);
+  }
+
+  private async openTerminalHere(): Promise<void> {
+    const cwd = this.getActiveFileDirCwd();
+    if (!cwd) return;
+    await this.openTerminalAt(cwd);
   }
 
   async loadSettings(): Promise<void> {
