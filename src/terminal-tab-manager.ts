@@ -417,7 +417,12 @@ export class TerminalTabManager {
     });
 
     const fitAddon = new FitAddon();
-    const webLinksAddon = new WebLinksAddon();
+    const webLinksAddon = new WebLinksAddon((_event, uri) => {
+      const { shell } = window.require("electron") as {
+        shell: { openExternal: (url: string) => Promise<void> };
+      };
+      void shell.openExternal(uri);
+    });
     const serializeAddon = new SerializeAddon();
     const searchAddon = new SearchAddon();
 
