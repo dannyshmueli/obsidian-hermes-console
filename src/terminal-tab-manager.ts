@@ -1,6 +1,6 @@
 import { Notice, App, FileSystemAdapter } from "obsidian";
 import type { AppWithDrag, ElectronWithWebUtils, FileWithPath } from "./obsidian-internals";
-import { Terminal } from "@xterm/xterm";
+import { Terminal, type ILink, type ILinkProvider } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import { WebLinksAddon } from "@xterm/addon-web-links";
 import { SerializeAddon } from "@xterm/addon-serialize";
@@ -414,15 +414,28 @@ export class TerminalTabManager {
         this.settings,
         this.themeRegistry,
       ),
+      linkHandler: {
+        activate: (_event: MouseEvent, uri: string) => {
+          if (!/^(https?|obsidian):\/\//i.test(uri)) return;
+          const { shell } = window.require("electron") as {
+            shell: { openExternal: (url: string) => Promise<void> };
+          };
+          void shell.openExternal(uri);
+        },
+        allowNonHttpProtocols: true,
+      },
     });
 
     const fitAddon = new FitAddon();
+    const WEB_LINK_REGEX =
+      /(https?|HTTPS?|obsidian):[/]{2}[^\s"'!*(){}|\\^<>`]*[^\s"':,.!?{}|\\^~[\]`()<>]/;
     const webLinksAddon = new WebLinksAddon((_event, uri) => {
+      if (!/^(https?|obsidian):\/\//i.test(uri)) return;
       const { shell } = window.require("electron") as {
         shell: { openExternal: (url: string) => Promise<void> };
       };
       void shell.openExternal(uri);
-    });
+    }, { urlRegex: WEB_LINK_REGEX });
     const serializeAddon = new SerializeAddon();
     const searchAddon = new SearchAddon();
 
@@ -431,6 +444,40 @@ export class TerminalTabManager {
     terminal.loadAddon(serializeAddon);
     terminal.loadAddon(searchAddon);
     terminal.open(containerEl);
+
+    terminal.registerLinkProvider({
+      provideLinks: (lineNumber: number, callback: (links: ILink[] | undefined) => void) => {
+        const line = terminal.buffer.active.getLine(lineNumber - 1);
+        if (!line) { callback([]); return; }
+        const text = line.translateToString(true);
+        const links: ILink[] = [];
+        const re = /\[\[([^\]|]+)(?:\|[^\]]+)?\]\]/g;
+        let match: RegExpExecArray | null;
+        while ((match = re.exec(text)) !== null) {
+          const name = match[1];
+          const start = match.index + 1;
+          const end = match.index + match[0].length + 1;
+          links.push({
+            range: {
+              start: { x: start, y: lineNumber },
+              end: { x: end, y: lineNumber },
+            },
+            text: match[0],
+            decorations: { pointerCursor: true, underline: true },
+            activate: () => {
+              const vault = this.app.vault.getName();
+              const { shell } = window.require("electron") as {
+                shell: { openExternal: (url: string) => Promise<void> };
+              };
+              void shell.openExternal(
+                `obsidian://open?vault=${encodeURIComponent(vault)}&file=${encodeURIComponent(name)}`
+              );
+            },
+          });
+        }
+        callback(links);
+      },
+    });
 
     return { terminal, fitAddon, serializeAddon, searchAddon };
   }
