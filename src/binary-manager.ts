@@ -148,13 +148,19 @@ export class BinaryManager {
 
       // Extract zip using platform-native tools
       if (platform === "win32") {
-        this.childProcess.execSync(
-          `powershell -NoProfile -Command "Expand-Archive -Path '${tmpZip}' -DestinationPath '${this.nodePtyDir}' -Force"`,
+        this.childProcess.execFileSync(
+          "powershell",
+          [
+            "-NoProfile",
+            "-Command",
+            `Expand-Archive -Path '${tmpZip.replace(/'/g, "''")}' -DestinationPath '${this.nodePtyDir.replace(/'/g, "''")}' -Force`,
+          ],
           { timeout: 30000 }
         );
       } else {
-        this.childProcess.execSync(
-          `unzip -o "${tmpZip}" -d "${this.nodePtyDir}"`,
+        this.childProcess.execFileSync(
+          "unzip",
+          ["-o", tmpZip, "-d", this.nodePtyDir],
           { timeout: 30000 }
         );
         // Ensure spawn-helper is executable
