@@ -95,6 +95,10 @@ See [URI Handler](docs/uri-handler.md) for the `obsidian://lean-terminal` protoc
 
 See [Security](docs/security.md) for the security review summary.
 
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md) for release history and feature documentation by version.
+
 ## Feedback
 
 Use this repo to report bugs, request features, or ask questions.
