@@ -15,6 +15,7 @@ import type { TerminalPluginSettings, NotificationSound } from "./settings";
 import type { BinaryManager } from "./binary-manager";
 import type { SavedTab } from "./session-state";
 import { WikiLinkAutocomplete, type AutocompleteEntry } from "./wikilink-autocomplete";
+import { getPtySequenceForKeyboardEvent } from "./terminal-key-sequences";
 
 const SEARCH_DECORATIONS = {
   matchBackground: "#ffff0050",
@@ -615,11 +616,13 @@ export class TerminalTabManager {
         return false;
       }
 
-      // Shift+Enter: send newline without submitting
-      if (e.shiftKey && e.key === "Enter") {
+      // Shift+Enter: send modified Enter so TUIs can insert a newline
+      // without treating it as a plain Enter/submit.
+      const keySequence = getPtySequenceForKeyboardEvent(e);
+      if (keySequence) {
         e.preventDefault();
         const s = this.sessions.find((s) => s.id === id);
-        if (s) s.pty.write("\n");
+        if (s) s.pty.write(keySequence);
         return false;
       }
 
