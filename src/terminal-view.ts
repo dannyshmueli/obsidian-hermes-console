@@ -4,6 +4,7 @@ import { TerminalTabManager, type TabManagerOptions, type CreateTabOpts } from "
 import { pushRecentSession } from "./recent-sessions";
 import type TerminalPlugin from "./main";
 import type { SavedViewState } from "./session-state";
+import { HERMES_MARK_ICON_ID } from "./hermes-icon";
 import {
   getTerminalViewCloseBlockedMessage,
   shouldBlockTerminalViewClose,
@@ -68,7 +69,7 @@ export class TerminalView extends ItemView {
 
     const brandEl = shellHeaderEl.createDiv({ cls: "terminal-shell-brand" });
     const brandIconEl = brandEl.createSpan({ cls: "terminal-shell-brand-icon" });
-    setIcon(brandIconEl, "feather");
+    setIcon(brandIconEl, HERMES_MARK_ICON_ID);
     brandEl.createSpan({ cls: "terminal-shell-wordmark", text: "HERMES" });
 
     shellHeaderEl.createDiv({ cls: "terminal-shell-divider" });

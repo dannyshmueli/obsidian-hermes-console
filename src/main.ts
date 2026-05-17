@@ -9,7 +9,7 @@ import { resumeHermesSession } from "./hermes-sessions";
 import type { SavedViewState } from "./session-state";
 import type { TerminalTabManager } from "./terminal-tab-manager";
 import { ObsidianContextTracker } from "./obsidian-context-bridge";
-import { HERMES_ICON_ID, HERMES_ICON_SVG } from "./hermes-icon";
+import { HERMES_ICON_ID, HERMES_ICON_SVG, HERMES_MARK_ICON_ID, HERMES_MARK_ICON_SVG } from "./hermes-icon";
 
 export default class TerminalPlugin extends Plugin {
   settings: TerminalPluginSettings = DEFAULT_SETTINGS;
@@ -22,6 +22,7 @@ export default class TerminalPlugin extends Plugin {
 
   async onload(): Promise<void> {
     addIcon(HERMES_ICON_ID, HERMES_ICON_SVG);
+    addIcon(HERMES_MARK_ICON_ID, HERMES_MARK_ICON_SVG);
     await this.loadSettings();
     this.obsidianContextTracker = new ObsidianContextTracker();
     this.obsidianContextTracker.rememberFromApp(this.app);
