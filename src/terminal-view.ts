@@ -1,4 +1,4 @@
-import { FileSystemAdapter, ItemView, Notice, WorkspaceLeaf, type ViewStateResult } from "obsidian";
+import { FileSystemAdapter, ItemView, Notice, WorkspaceLeaf, setIcon, type ViewStateResult } from "obsidian";
 import { VIEW_TYPE_TERMINAL } from "./constants";
 import { TerminalTabManager, type TabManagerOptions, type CreateTabOpts } from "./terminal-tab-manager";
 import { pushRecentSession } from "./recent-sessions";
@@ -8,6 +8,11 @@ import {
   getTerminalViewCloseBlockedMessage,
   shouldBlockTerminalViewClose,
 } from "./terminal-session-actions";
+
+function formatCwdHint(cwd: string): string {
+  const parts = cwd.split(/[\\/]/).filter(Boolean);
+  return parts[parts.length - 1] ?? cwd;
+}
 
 export class TerminalView extends ItemView {
   private plugin: TerminalPlugin;
@@ -50,15 +55,6 @@ export class TerminalView extends ItemView {
     this.viewContainer = container;
     this.applyTabBarPosition();
 
-    // Tab bar
-    const tabBarEl = container.createDiv({ cls: "terminal-tab-bar" });
-
-    const mainAreaEl = container.createDiv({ cls: "terminal-main-area" });
-    const contextHeaderEl = mainAreaEl.createDiv({ cls: "terminal-context-header" });
-
-    // Terminal host (all session containers go here)
-    const terminalHostEl = mainAreaEl.createDiv({ cls: "terminal-host" });
-
     // Determine CWD — vault root
     let cwd: string;
     try {
@@ -66,6 +62,40 @@ export class TerminalView extends ItemView {
     } catch {
       cwd = process.cwd();
     }
+
+    const shellEl = container.createDiv({ cls: "terminal-shell" });
+    const shellHeaderEl = shellEl.createDiv({ cls: "terminal-shell-header" });
+
+    const brandEl = shellHeaderEl.createDiv({ cls: "terminal-shell-brand" });
+    const brandIconEl = brandEl.createSpan({ cls: "terminal-shell-brand-icon" });
+    setIcon(brandIconEl, "feather");
+    brandEl.createSpan({ cls: "terminal-shell-wordmark", text: "HERMES" });
+
+    shellHeaderEl.createDiv({ cls: "terminal-shell-divider" });
+
+    const contextHeaderEl = shellHeaderEl.createDiv({ cls: "terminal-context-header" });
+
+    const cwdHintEl = shellHeaderEl.createDiv({
+      cls: "terminal-shell-cwd",
+      text: `cwd ${formatCwdHint(cwd)}`,
+    });
+    cwdHintEl.title = cwd;
+
+    const settingsButton = shellHeaderEl.createEl("button", {
+      cls: "terminal-shell-settings-button",
+    });
+    settingsButton.type = "button";
+    settingsButton.title = "Open Hermes terminal settings";
+    settingsButton.setAttribute("aria-label", "Open Hermes terminal settings");
+    setIcon(settingsButton, "settings");
+    settingsButton.addEventListener("click", () => this.openSettingsTab());
+
+    const shellBodyEl = shellEl.createDiv({ cls: "terminal-shell-body" });
+    const tabBarEl = shellBodyEl.createDiv({ cls: "terminal-tab-bar" });
+    const mainAreaEl = shellBodyEl.createDiv({ cls: "terminal-main-area" });
+
+    // Terminal host (all session containers go here)
+    const terminalHostEl = mainAreaEl.createDiv({ cls: "terminal-host" });
 
     // Resolve plugin directory for native module loading
     const path = window.require("path") as typeof import("path");
@@ -122,6 +152,22 @@ export class TerminalView extends ItemView {
         }
       }, 10000)
     );
+  }
+
+  private openSettingsTab(): void {
+    const setting = (this.app as typeof this.app & {
+      setting?: {
+        open?: () => void;
+        openTabById?: (id: string) => void;
+      };
+    }).setting;
+
+    try {
+      setting?.open?.();
+      setting?.openTabById?.(this.plugin.manifest.id);
+    } catch (err) {
+      console.error("Terminal: failed to open Hermes terminal settings", err);
+    }
   }
 
   // async: satisfies ItemView.onClose() → Promise<void>; no actual async work here

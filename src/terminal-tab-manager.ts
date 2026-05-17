@@ -412,9 +412,14 @@ export class TerminalTabManager {
     this.contextHeaderEl.empty();
     const toggle = this.contextHeaderEl.createEl("button", {
       cls: "terminal-context-toggle",
-      text: this.settings.sendObsidianContextToHermes ? "Context ON" : "Context OFF",
     });
+    toggle.type = "button";
+    toggle.setAttribute("aria-pressed", String(this.settings.sendObsidianContextToHermes));
     toggle.toggleClass("terminal-context-toggle--on", this.settings.sendObsidianContextToHermes);
+    toggle.createSpan({ cls: "terminal-context-toggle-label", text: "Send selection" });
+    const switchEl = toggle.createSpan({ cls: "terminal-context-switch" });
+    switchEl.setAttribute("aria-hidden", "true");
+    switchEl.createSpan({ cls: "terminal-context-switch-dot" });
     toggle.addEventListener("click", () => {
       this.settings.sendObsidianContextToHermes = !this.settings.sendObsidianContextToHermes;
       void this.saveSettings?.();
