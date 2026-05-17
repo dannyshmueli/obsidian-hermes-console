@@ -274,11 +274,11 @@ body.theme-light .terminal-view-container {
 }
 
 .terminal-shell-settings-button {
-  width: 30px;
-  height: 30px;
+  width: 34px;
+  height: 34px;
   margin-left: 2px;
   border: 1px solid transparent;
-  border-radius: 9px;
+  border-radius: 10px;
   background: transparent;
   color: var(--text-muted);
   cursor: pointer;
@@ -291,8 +291,9 @@ body.theme-light .terminal-view-container {
 }
 
 .terminal-shell-settings-button svg {
-  width: 16px;
-  height: 16px;
+  width: 22px;
+  height: 22px;
+  stroke-width: 2.35;
 }
 
 .terminal-shell-body {

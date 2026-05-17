@@ -88,7 +88,7 @@ export class TerminalView extends ItemView {
     settingsButton.type = "button";
     settingsButton.title = "Open Hermes terminal settings";
     settingsButton.setAttribute("aria-label", "Open Hermes terminal settings");
-    setIcon(settingsButton, "settings");
+    setIcon(settingsButton, "sliders-horizontal");
     settingsButton.addEventListener("click", () => this.openSettingsTab());
 
     const shellBodyEl = shellEl.createDiv({ cls: "terminal-shell-body" });
