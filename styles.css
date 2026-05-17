@@ -211,7 +211,7 @@ body.theme-light .terminal-view-container {
   flex-direction: column;
   overflow: hidden;
   border: 1px solid var(--hermes-border);
-  border-radius: 14px;
+  border-radius: 0;
   background:
     linear-gradient(180deg, color-mix(in srgb, var(--hermes-panel-bg-2) 88%, transparent), var(--hermes-panel-bg)),
     var(--hermes-panel-bg);
