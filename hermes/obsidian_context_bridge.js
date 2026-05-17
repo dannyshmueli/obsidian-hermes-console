@@ -109,6 +109,10 @@ function isValidPayload(payload) {
   );
 }
 
+function safeJsonForSystemInjection(value) {
+  return JSON.stringify(value).replace(/[<>]/g, (char) => (char === "<" ? "\\u003c" : "\\u003e"));
+}
+
 function formatObsidianContextForHermesTurn(payload) {
   if (!payload.attach.enabled || !payload.context) return "";
 
@@ -128,10 +132,7 @@ function formatObsidianContextForHermesTurn(payload) {
     if (context.selectedText.length <= INLINE_SELECTION_LIMIT) {
       return [
         ...common,
-        "selected_text:",
-        "```markdown",
-        context.selectedText,
-        "```",
+        `selected_text_json: ${safeJsonForSystemInjection(context.selectedText)}`,
         "</obsidian_context>",
       ].join("\n");
     }

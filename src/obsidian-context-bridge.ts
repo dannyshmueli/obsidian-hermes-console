@@ -229,6 +229,10 @@ export function parseObsidianContextBridgePayload(raw: string): ObsidianContextB
   }
 }
 
+function safeJsonForSystemInjection(value: string): string {
+  return JSON.stringify(value).replace(/[<>]/g, (char) => (char === "<" ? "\\u003c" : "\\u003e"));
+}
+
 export function formatObsidianContextForHermesTurn(
   payload: ObsidianContextBridgePayload,
 ): string {
@@ -252,10 +256,7 @@ export function formatObsidianContextForHermesTurn(
     if (context.selectedText.length <= INLINE_SELECTION_LIMIT) {
       return [
         ...common,
-        "selected_text:",
-        "```markdown",
-        context.selectedText,
-        "```",
+        `selected_text_json: ${safeJsonForSystemInjection(context.selectedText)}`,
         "</obsidian_context>",
       ].join("\n");
     }
