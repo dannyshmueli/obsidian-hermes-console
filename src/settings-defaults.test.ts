@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { DEFAULT_SETTINGS } from "./settings";
+import { HERMES_ICON_ID } from "./hermes-icon";
 import { shouldRunStartupCommandForTab } from "./startup-command";
 
 describe("DEFAULT_SETTINGS", () => {
@@ -11,8 +12,8 @@ describe("DEFAULT_SETTINGS", () => {
     expect(DEFAULT_SETTINGS.startupCommand).toBe("hermes");
   });
 
-  it("defaults to the Hermes bot chat icon", () => {
-    expect(DEFAULT_SETTINGS.ribbonIcon).toBe("bot-message-square");
+  it("defaults to the custom Hermes caduceus wing icon", () => {
+    expect(DEFAULT_SETTINGS.ribbonIcon).toBe(HERMES_ICON_ID);
   });
 
   it("defaults Hermes session integration on", () => {

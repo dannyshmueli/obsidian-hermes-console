@@ -7,6 +7,7 @@ import {
   MAX_TINT_STRENGTH,
   type TabColorDef,
 } from "./tab-colors";
+import { HERMES_ICON_ID } from "./hermes-icon";
 
 export type NotificationSound = "beep" | "chime" | "ping" | "pop";
 
@@ -63,7 +64,7 @@ export const DEFAULT_SETTINGS: TerminalPluginSettings = {
   cursorBlink: true,
   copyOnSelect: false,
   scrollback: 500000,
-  ribbonIcon: "bot-message-square",
+  ribbonIcon: HERMES_ICON_ID,
   defaultLocation: "bottom",
   notifyOnCompletion: false,
   notificationSound: "beep",
@@ -476,7 +477,7 @@ export class TerminalSettingTab extends PluginSettingTab {
 
     const iconSetting = new Setting(containerEl)
       .setName("Icon")
-      .setDesc("Lucide icon name for the ribbon and tab (e.g. \"terminal\", \"code-2\", \"zap\"). Browse icons at lucide.dev.");
+      .setDesc(`Icon name for the ribbon and tab. Default is the custom Hermes caduceus/wing mark (${HERMES_ICON_ID}); Lucide names still work.`);
 
     let previewEl: HTMLElement | null = null;
 

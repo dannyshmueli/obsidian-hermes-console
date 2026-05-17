@@ -1,4 +1,4 @@
-import { FileSystemAdapter, Plugin, TFolder, WorkspaceLeaf, setIcon } from "obsidian";
+import { FileSystemAdapter, Plugin, TFolder, WorkspaceLeaf, addIcon, setIcon } from "obsidian";
 import { VIEW_TYPE_TERMINAL } from "./constants";
 import { TerminalView } from "./terminal-view";
 import { TerminalSettingTab, DEFAULT_SETTINGS, type TerminalPluginSettings } from "./settings";
@@ -9,6 +9,7 @@ import { resumeHermesSession } from "./hermes-sessions";
 import type { SavedViewState } from "./session-state";
 import type { TerminalTabManager } from "./terminal-tab-manager";
 import { ObsidianContextTracker } from "./obsidian-context-bridge";
+import { HERMES_ICON_ID, HERMES_ICON_SVG } from "./hermes-icon";
 
 export default class TerminalPlugin extends Plugin {
   settings: TerminalPluginSettings = DEFAULT_SETTINGS;
@@ -20,6 +21,7 @@ export default class TerminalPlugin extends Plugin {
   private contextRefreshRaf: number | null = null;
 
   async onload(): Promise<void> {
+    addIcon(HERMES_ICON_ID, HERMES_ICON_SVG);
     await this.loadSettings();
     this.obsidianContextTracker = new ObsidianContextTracker();
     this.obsidianContextTracker.rememberFromApp(this.app);
@@ -376,6 +378,11 @@ export default class TerminalPlugin extends Plugin {
 
   async loadSettings(): Promise<void> {
     this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData() as Partial<TerminalPluginSettings>);
+    // Migrate the old generic Lucide icon to the Hermes-specific caduceus/wing
+    // mark, while preserving any custom icon name the user entered manually.
+    if (this.settings.ribbonIcon === "bot-message-square") {
+      this.settings.ribbonIcon = DEFAULT_SETTINGS.ribbonIcon;
+    }
     // tabColors is the only array in settings. Object.assign is shallow,
     // so on a fresh install (data.json has no tabColors) the merged
     // settings would share the reference with DEFAULT_SETTINGS, and any
