@@ -726,25 +726,6 @@ export class TerminalSettingTab extends PluginSettingTab {
         })
       );
 
-    new Setting(containerEl)
-      .setName("Recent sessions to keep")
-      .setDesc(
-        "When a tab is closed, its terminal scrollback is kept for rescue via \"Restore console or Hermes session\". This is separate from Hermes CLI resume. Set to 0 to disable."
-      )
-      .addText((text) =>
-        text
-          .setValue(String(this.plugin.settings.recentSessionsMax))
-          .onChange(async (value) => {
-            const num = parseInt(value, 10);
-            if (!isNaN(num) && num >= 0) {
-              this.plugin.settings.recentSessionsMax = num;
-              if (this.plugin.settings.recentSessions.length > num) {
-                this.plugin.settings.recentSessions.splice(num);
-              }
-              await this.plugin.saveSettings();
-            }
-          })
-      );
   }
 
   private renderHermesSessionsSection(containerEl: HTMLElement): void {
