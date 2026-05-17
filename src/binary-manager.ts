@@ -11,8 +11,8 @@ interface BinaryManifest {
   installedAt: string;
 }
 
-const REPO_OWNER = "sdkasper";
-const REPO_NAME = "lean-obsidian-terminal";
+const REPO_OWNER = "dannyshmueli";
+const REPO_NAME = "obsidian-hermes-console";
 
 
 export class BinaryManager {

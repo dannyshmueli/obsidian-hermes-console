@@ -1,5 +1,5 @@
 {
-  "name": "lean-hermes-obsidian-terminal",
+  "name": "obsidian-hermes-console",
   "version": "1.1.0",
   "description": "Hermes Console for Obsidian Plan using xterm.js and node-pty",
   "main": "main.js",

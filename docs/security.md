@@ -22,4 +22,4 @@ A full security review of the codebase was conducted covering code-level vulnera
 
 When the plugin downloads native `node-pty` binaries from GitHub Releases, it verifies their SHA-256 checksum against a `checksums.json` file published alongside the release. Checksum verification is mandatory - if `checksums.json` is unreachable or does not contain an entry for the downloaded asset, the installation is aborted.
 
-SHA-256 checksums for each release are also published in `checksums.json` attached to every [GitHub Release](https://github.com/sdkasper/lean-obsidian-terminal/releases) for manual verification.
+SHA-256 checksums for each release are also published in `checksums.json` attached to every [GitHub Release](https://github.com/dannyshmueli/obsidian-hermes-console/releases) for manual verification.

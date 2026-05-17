@@ -1,11 +1,11 @@
 # Hermes Console for Obsidian Plan
 
-[![Release](https://img.shields.io/github/release/sdkasper/lean-obsidian-terminal?logo=obsidian&logoColor=A991D4&style=flat-square&labelColor=000000&color=25D0F7)](https://github.com/sdkasper/lean-obsidian-terminal/releases)
+[![Release](https://img.shields.io/github/release/dannyshmueli/obsidian-hermes-console?logo=obsidian&logoColor=A991D4&style=flat-square&labelColor=000000&color=25D0F7)](https://github.com/dannyshmueli/obsidian-hermes-console/releases)
 [![Obsidian](https://img.shields.io/badge/Obsidian-v1.5.0+-A991D4?style=flat-square&labelColor=000000)](https://obsidian.md)
-[![Issues](https://img.shields.io/github/issues/sdkasper/lean-obsidian-terminal?logo=obsidian&logoColor=A991D4&style=flat-square&labelColor=000000&color=FC3634)](https://github.com/sdkasper/lean-obsidian-terminal/issues)
-[![Closed](https://img.shields.io/github/issues-closed/sdkasper/lean-obsidian-terminal?logo=obsidian&logoColor=A991D4&style=flat-square&labelColor=000000&color=18BC9C)](https://github.com/sdkasper/lean-obsidian-terminal/issues?q=is%3Aissue+is%3Aclosed)
-[![Downloads](https://img.shields.io/github/downloads/sdkasper/lean-obsidian-terminal/total?logo=obsidian&logoColor=A991D4&style=flat-square&labelColor=000000&color=25D0F7)](https://github.com/sdkasper/lean-obsidian-terminal/releases)
-[![Stars](https://img.shields.io/github/stars/sdkasper/lean-obsidian-terminal?logo=obsidian&logoColor=A991D4&style=flat-square&labelColor=000000&color=000000)](https://github.com/sdkasper/lean-obsidian-terminal/stargazers)
+[![Issues](https://img.shields.io/github/issues/dannyshmueli/obsidian-hermes-console?logo=obsidian&logoColor=A991D4&style=flat-square&labelColor=000000&color=FC3634)](https://github.com/dannyshmueli/obsidian-hermes-console/issues)
+[![Closed](https://img.shields.io/github/issues-closed/dannyshmueli/obsidian-hermes-console?logo=obsidian&logoColor=A991D4&style=flat-square&labelColor=000000&color=18BC9C)](https://github.com/dannyshmueli/obsidian-hermes-console/issues?q=is%3Aissue+is%3Aclosed)
+[![Downloads](https://img.shields.io/github/downloads/dannyshmueli/obsidian-hermes-console/total?logo=obsidian&logoColor=A991D4&style=flat-square&labelColor=000000&color=25D0F7)](https://github.com/dannyshmueli/obsidian-hermes-console/releases)
+[![Stars](https://img.shields.io/github/stars/dannyshmueli/obsidian-hermes-console?logo=obsidian&logoColor=A991D4&style=flat-square&labelColor=000000&color=000000)](https://github.com/dannyshmueli/obsidian-hermes-console/stargazers)
 [![License](https://img.shields.io/badge/License-MIT-007BFF?style=flat-square&labelColor=000000)](LICENSE)
 [![Discord](https://img.shields.io/badge/Discord-Join%20Server-5865F2?style=flat-square&labelColor=000000&logo=discord&logoColor=5865F2)](https://discord.gg/sbMg6PP2vq)
 
@@ -85,7 +85,7 @@ Use this path for beta builds or if the Hermes Console plugin is not yet availab
 
 1. Install the [BRAT](https://github.com/TfTHacker/obsidian42-brat) plugin if you don't have it
 2. Open **Settings > BRAT > Add Beta Plugin**
-3. Enter: `sdkasper/lean-obsidian-terminal`
+3. Enter: `dannyshmueli/obsidian-hermes-console`
 4. Enable the plugin in **Settings > Community Plugins**
 5. Go to **Settings > Hermes Console for Obsidian Plan > Download binaries** and click **Download** to fetch the native `node-pty` binary for your platform
 6. Open the console via the ribbon icon or command palette
@@ -158,10 +158,10 @@ See [CHANGELOG.md](CHANGELOG.md) for release history and feature documentation b
 
 Use this repo to report bugs, request features, or ask questions.
 
-- [Report a Bug](https://github.com/sdkasper/lean-obsidian-terminal/issues/new?assignees=&labels=bug&template=bug_report.md)
-- [Request a Feature](https://github.com/sdkasper/lean-obsidian-terminal/issues/new?assignees=&labels=enhancement&template=feature_request.md)
-- [Report a Performance Issue](https://github.com/sdkasper/lean-obsidian-terminal/issues/new?assignees=&labels=performance&template=performance_issue.md)
-- [Ask a Question / Share Feedback](https://github.com/sdkasper/lean-obsidian-terminal/discussions)
+- [Report a Bug](https://github.com/dannyshmueli/obsidian-hermes-console/issues/new?assignees=&labels=bug&template=bug_report.md)
+- [Request a Feature](https://github.com/dannyshmueli/obsidian-hermes-console/issues/new?assignees=&labels=enhancement&template=feature_request.md)
+- [Report a Performance Issue](https://github.com/dannyshmueli/obsidian-hermes-console/issues/new?assignees=&labels=performance&template=performance_issue.md)
+- [Ask a Question / Share Feedback](https://github.com/dannyshmueli/obsidian-hermes-console/discussions)
 
 If you want to support my work, you can use this link to [buy me a drink](https://kspr.me/cheers) - thank you, I appreciate you.
 

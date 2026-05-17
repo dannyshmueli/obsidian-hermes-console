@@ -86,13 +86,13 @@ All notable changes to Hermes Console for Obsidian Plan are documented here.
 
 ### Improvements
 
-- @FarhadGSRX made their first contribution in https://github.com/sdkasper/lean-obsidian-terminal/pull/12
+- @FarhadGSRX made their first contribution in https://github.com/dannyshmueli/obsidian-hermes-console/pull/12
 
 ## 0.8.0 - April 21, 2026
 
 ### Improvements
 
-- @kkugot made their first contribution in https://github.com/sdkasper/lean-obsidian-terminal/pull/5
+- @kkugot made their first contribution in https://github.com/dannyshmueli/obsidian-hermes-console/pull/5
 
 ### Bug fixes
 
@@ -104,7 +104,7 @@ All notable changes to Hermes Console for Obsidian Plan are documented here.
 
 ### Improvements
 
-- @CHodder5 made their first contribution in https://github.com/sdkasper/lean-obsidian-terminal/pull/10
+- @CHodder5 made their first contribution in https://github.com/dannyshmueli/obsidian-hermes-console/pull/10
 
 ### Bug fixes
 
@@ -134,4 +134,4 @@ All notable changes to Hermes Console for Obsidian Plan are documented here.
 
 ## v0.1.0 - March 25, 2026
 
-Older releases and more details: [GitHub Releases](https://github.com/sdkasper/lean-obsidian-terminal/releases)
+Older releases and more details: [GitHub Releases](https://github.com/dannyshmueli/obsidian-hermes-console/releases)
