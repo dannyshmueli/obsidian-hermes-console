@@ -562,6 +562,13 @@ body.theme-light .terminal-view-container {
   color: var(--hermes-accent-strong);
 }
 
+.terminal-tab-editor {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+
 /* Rename input inline in tab */
 .terminal-tab-rename-input {
   background: var(--hermes-panel-bg);
@@ -572,6 +579,47 @@ body.theme-light .terminal-view-container {
   padding: 2px 6px;
   width: 120px;
   outline: none;
+}
+
+.terminal-tab-editor-colors {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 4px;
+  border: 1px solid var(--hermes-border-soft);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--background-secondary) 86%, transparent);
+}
+
+.terminal-tab-editor-swatch {
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border-radius: 50%;
+  border: 2px solid color-mix(in srgb, var(--background-modifier-border) 70%, transparent);
+  cursor: pointer;
+  flex: 0 0 auto;
+}
+
+.terminal-tab-editor-swatch:hover,
+.terminal-tab-editor-swatch.active {
+  border-color: var(--text-normal);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--interactive-accent) 28%, transparent);
+}
+
+.terminal-tab-editor-swatch-none {
+  position: relative;
+  background: var(--background-primary);
+}
+
+.terminal-tab-editor-swatch-none::after {
+  content: "";
+  position: absolute;
+  left: 2px;
+  right: 2px;
+  top: 50%;
+  border-top: 2px solid var(--text-muted);
+  transform: rotate(-35deg);
 }
 
 /* Tab context menu */

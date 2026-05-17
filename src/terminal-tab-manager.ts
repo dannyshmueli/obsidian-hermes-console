@@ -1112,20 +1112,51 @@ export class TerminalTabManager {
     new Notice(`${session.name}: ${status}`);
   }
 
-  private renameTab(id: string, labelEl: HTMLElement): void {
+  private editTab(id: string, labelEl: HTMLElement): void {
     const session = this.sessions.find((s) => s.id === id);
     if (!session) return;
+
+    const editor = activeDocument.createElement("div");
+    editor.className = "terminal-tab-editor";
 
     const input = activeDocument.createElement("input");
     input.type = "text";
     input.value = session.name;
     input.className = "terminal-tab-rename-input";
+    editor.appendChild(input);
 
-    labelEl.replaceWith(input);
+    const colorRow = editor.createDiv({ cls: "terminal-tab-editor-colors" });
+    for (const c of this.settings.tabColors) {
+      const swatch = colorRow.createEl("button", { cls: "terminal-tab-editor-swatch" });
+      swatch.type = "button";
+      swatch.title = c.value ? `Set tab color: ${c.name}` : "Clear tab color";
+      swatch.setAttribute("aria-label", swatch.title);
+      if (c.value) {
+        swatch.style.background = c.value;
+      } else {
+        swatch.classList.add("terminal-tab-editor-swatch-none");
+      }
+      if (session.color === c.value) swatch.classList.add("active");
+
+      // Prevent input blur from committing and rerendering before the click fires.
+      swatch.addEventListener("mousedown", (e) => e.preventDefault());
+      swatch.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        session.color = c.value;
+        session.terminal.options.theme = resolveSessionTheme(session, this.settings, this.themeRegistry);
+        commit();
+      });
+    }
+
+    labelEl.replaceWith(editor);
     input.focus();
     input.select();
 
+    let committed = false;
     const commit = () => {
+      if (committed) return;
+      committed = true;
       const newName = input.value.trim() || session.name;
       session.name = newName;
       session.terminal.write(`${ESC}]0;${sanitizeOscTitle(newName)}\x07`);
@@ -1133,14 +1164,15 @@ export class TerminalTabManager {
       this.requestSaveLayout?.();
     };
 
-    input.addEventListener("blur", commit);
+    input.addEventListener("blur", () => window.setTimeout(commit, 0));
     input.addEventListener("keydown", (e) => {
       if (e.key === "Enter") {
         e.preventDefault();
-        input.blur();
+        commit();
       } else if (e.key === "Escape") {
-        input.value = session.name;
-        input.blur();
+        e.preventDefault();
+        committed = true;
+        this.renderTabBar();
       }
     });
   }
@@ -1194,10 +1226,10 @@ export class TerminalTabManager {
     menu.style.top = `${e.pageY}px`;
 
     // Rename option
-    const renameItem = menu.createDiv({ cls: "terminal-ctx-item", text: "Rename" });
+    const renameItem = menu.createDiv({ cls: "terminal-ctx-item", text: "Edit name/color" });
     renameItem.addEventListener("click", () => {
       menu.remove();
-      this.renameTab(sessionId, labelEl);
+      this.editTab(sessionId, labelEl);
     });
 
     // Pin / Unpin option
@@ -1321,12 +1353,12 @@ export class TerminalTabManager {
 
       const renameBtn = tab.createEl("button", { cls: "terminal-tab-rename" });
       renameBtn.type = "button";
-      renameBtn.title = "Rename tab";
-      renameBtn.setAttribute("aria-label", `Rename tab ${session.name}`);
+      renameBtn.title = "Edit tab name/color";
+      renameBtn.setAttribute("aria-label", `Edit tab name/color ${session.name}`);
       setIcon(renameBtn, "pencil");
       renameBtn.addEventListener("click", (e) => {
         e.stopPropagation();
-        this.renameTab(session.id, label);
+        this.editTab(session.id, label);
       });
 
       if (!session.pinned) {
