@@ -18,8 +18,7 @@ export interface SavedTab {
    */
   bufferSerial?: string;
   /**
-   * Command to run after the shell spawns on restore
-   * (e.g. "claude --resume <uuid>").
+   * Command to run after the shell spawns (e.g. "hermes --resume <session-id>").
    */
   resumeCommand?: string;
   /** Whether this tab was pinned when state was captured. */

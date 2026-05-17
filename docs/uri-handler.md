@@ -1,11 +1,11 @@
 # URI Handler
 
-The plugin registers the `obsidian://lean-terminal` protocol handler, usable from any note link, dashboard button, or external script:
+Lean Hermes Obsidian Plugin (Terminal) keeps the compatible `obsidian://lean-terminal` protocol handler, usable from any note link, dashboard button, or external script:
 
 | Parameter | Description | Example |
 |-----------|-------------|---------|
 | `cwd` | Open a terminal tab in the given directory (URL-encoded path) | `obsidian://lean-terminal?cwd=%2Fhome%2Fuser%2Fprojects%2Fmy-app` |
-| `resume` | Open a terminal tab and run `claude --resume <session-id>` once the shell is ready (requires Claude integration enabled) | `obsidian://lean-terminal?resume=<uuid>` |
+| `resume` | Open a fresh terminal tab and run `hermes --resume <session-id>` once the shell is ready (requires Hermes session integration enabled) | `obsidian://lean-terminal?resume=20260517_103803_4b6c9d` |
 
 The `cwd` parameter is useful for dashboards and launchers. In an Obsidian note with Dataview JS or a custom button plugin:
 

@@ -1,0 +1,71 @@
+Hermes Obsidian context bridge
+==============================
+
+Lean Hermes Obsidian Plugin (Terminal) writes the current Obsidian attachment state to:
+
+  <vault>/.obsidian/hermes/context.json
+
+Plain Enter always writes a fresh marker before the PTY receives Enter. When
+"Send Obsidian context to Hermes" is off, the marker has attach.enabled=false
+and context=null. Hermes consumers must treat that as a fresh detach and clear
+any previously accepted selected text.
+
+Standalone Hermes loader
+------------------------
+
+This repository includes a concrete CommonJS loader at:
+
+  hermes/obsidian_context_bridge.js
+
+Load it from Hermes with the bridge path for the active vault:
+
+  const { createObsidianHermesBridge } = require("/path/to/lean-obsidian-terminal/hermes/obsidian_context_bridge");
+
+  const obsidian = createObsidianHermesBridge({
+    bridgePath: "/Users/danny/wiki/.obsidian/hermes/context.json"
+  });
+
+  module.exports = {
+    pre_llm_call(turn) {
+      return obsidian.pre_llm_call(turn);
+    },
+    tools: {
+      obsidian_context() {
+        return obsidian.obsidian_context();
+      }
+    }
+  };
+
+If the Hermes runtime uses a different plugin shape, keep the same calls:
+
+  1. Call obsidian.pre_llm_call(turn) immediately before the LLM request.
+  2. Register obsidian.obsidian_context() as the obsidian_context tool.
+
+pre_llm_call reads the latest bridge file, rejects stale payloads, accepts a
+newer updateTimestamp even if submitSequence reset after an Obsidian/plugin
+reload, and appends a system message to turn.messages when that array exists.
+It also returns the injection string for runtimes that inject prompt material
+themselves.
+
+obsidian_context() returns the full selected text or cursor context for the
+current accepted turn. It returns null after a fresh disabled/null marker, after
+the freshness window, or when the bridge file is missing/invalid.
+
+Environment variable fallback
+-----------------------------
+
+If bridgePath is omitted, the loader reads OBSIDIAN_CONTEXT_BRIDGE_PATH.
+
+  OBSIDIAN_CONTEXT_BRIDGE_PATH="/Users/danny/wiki/.obsidian/hermes/context.json"
+
+Expected behavior
+-----------------
+
+- Missing/unreadable bridge: pre_llm_call returns "" and obsidian_context()
+  returns null.
+- attach.enabled=false: pre_llm_call returns "" and obsidian_context() returns
+  null, clearing previously accepted context.
+- Selection context: pre_llm_call injects metadata plus selected text when small;
+  large selections inject a preview and obsidian_context() returns the full text.
+- Cursor context: pre_llm_call injects the file path, cursor, current line, and
+  capped surrounding lines.

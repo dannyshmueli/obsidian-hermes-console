@@ -211,6 +211,54 @@
   border-left: 1px solid var(--background-modifier-border);
 }
 
+.terminal-main-area {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+}
+
+.terminal-context-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  min-height: 28px;
+  background: var(--background-secondary-alt);
+  border-bottom: 1px solid var(--background-modifier-border);
+  flex-shrink: 0;
+  font-size: 12px;
+}
+
+.terminal-context-toggle {
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 4px;
+  background: var(--interactive-normal);
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 11px;
+  line-height: 1.2;
+  padding: 3px 8px;
+}
+
+.terminal-context-toggle:hover {
+  background: var(--interactive-hover);
+  color: var(--text-normal);
+}
+
+.terminal-context-toggle--on {
+  color: var(--text-on-accent);
+  background: var(--interactive-accent);
+  border-color: var(--interactive-accent);
+}
+
+.terminal-context-status {
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .terminal-view-container.terminal-tabs-left .terminal-tab.active {
   box-shadow: inset -2px 0 0 var(--tab-accent, var(--interactive-accent));
 }
@@ -265,6 +313,31 @@
 
 .terminal-tab-label {
   pointer-events: none;
+}
+
+.terminal-tab-rename {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  opacity: 0.55;
+  border-radius: 2px;
+  padding: 0;
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.terminal-tab-rename:hover {
+  opacity: 1;
+  background: var(--background-modifier-hover);
+}
+
+.terminal-tab-rename svg {
+  width: 14px;
+  height: 14px;
 }
 
 .terminal-tab-close {
@@ -332,6 +405,10 @@
 
 .terminal-ctx-item:hover {
   background: var(--background-modifier-hover);
+}
+
+.terminal-ctx-item-danger {
+  color: var(--text-error);
 }
 
 .terminal-ctx-color-label {

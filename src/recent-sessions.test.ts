@@ -1,5 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { relativeTime, pushRecentSession } from "./recent-sessions";
+import {
+  createHermesResumeTabOptions,
+  createRecentTerminalRestoreTabOptions,
+  createRestoreSessionItems,
+  getRestoreSessionItemText,
+  relativeTime,
+  pushRecentSession,
+} from "./recent-sessions";
 import type { SavedTab, RecentSession } from "./session-state";
 import type TerminalPlugin from "./main";
 
@@ -102,5 +109,102 @@ describe("pushRecentSession", () => {
     const plugin = makePlugin(5);
     await pushRecentSession(plugin as unknown as TerminalPlugin, makeTab("Y"));
     expect(plugin.saveSettings).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("createRecentTerminalRestoreTabOptions", () => {
+  it("restores terminal scrollback without rerunning a stale Hermes resume command", () => {
+    const opts = createRecentTerminalRestoreTabOptions({
+      name: "Hermes old scrollback",
+      color: "blue",
+      cwd: "/tmp/project",
+      bufferSerial: "old terminal output",
+      resumeCommand: "hermes --resume 20260517_103803_4b6c9d",
+      closedAt: 123,
+    });
+
+    expect(opts).toMatchObject({
+      name: "Hermes old scrollback",
+      color: "blue",
+      cwd: "/tmp/project",
+      bufferSerial: "old terminal output",
+      restored: true,
+    });
+    expect(opts.resumeCommand).toBeUndefined();
+  });
+});
+
+describe("createHermesResumeTabOptions", () => {
+  it("opens a fresh terminal that resumes Hermes instead of replaying terminal scrollback", () => {
+    const plugin = {
+      app: {
+        vault: {
+          adapter: {},
+        },
+      },
+    } as unknown as TerminalPlugin;
+
+    const opts = createHermesResumeTabOptions(plugin, {
+      sessionId: "20260517_103803_4b6c9d",
+      title: "Obsidian Hermes Context",
+      preview: "last prompt",
+      lastActive: "just now",
+    });
+
+    expect(opts).toMatchObject({
+      name: "Hermes 20260517",
+      color: "",
+      cwd: "",
+      resumeCommand: "hermes --resume 20260517_103803_4b6c9d",
+    });
+    expect(opts.bufferSerial).toBeUndefined();
+    expect(opts.restored).toBeUndefined();
+  });
+});
+
+describe("restore session picker items", () => {
+  it("combines Hermes sessions and closed terminal tabs into one picker list", () => {
+    const items = createRestoreSessionItems(
+      [
+        {
+          sessionId: "20260517_103803_4b6c9d",
+          title: "Fix restore UX",
+          preview: "one command",
+          lastActive: "2m ago",
+        },
+      ],
+      [
+        { name: "Older terminal", color: "", cwd: "/old", closedAt: 1000 },
+        { name: "Newer terminal", color: "", cwd: "/new", closedAt: 2000 },
+      ]
+    );
+
+    expect(items.map((item) => item.kind)).toEqual(["hermes", "terminal", "terminal"]);
+    expect(items[1]).toMatchObject({ kind: "terminal", session: { name: "Newer terminal" } });
+  });
+
+  it("labels item kinds clearly inside the unified picker", () => {
+    const hermesItem = createRestoreSessionItems(
+      [
+        {
+          sessionId: "20260517_103803_4b6c9d",
+          title: "Fix restore UX",
+          preview: "one command",
+          lastActive: "2m ago",
+        },
+      ],
+      []
+    )[0];
+    const terminalItem = createRestoreSessionItems(
+      [],
+      [{ name: "Hermes old scrollback", color: "", cwd: "/tmp/project", closedAt: 1_000 }]
+    )[0];
+
+    expect(getRestoreSessionItemText(hermesItem, 10_000)).toBe(
+      "Hermes session: Fix restore UX — one command (2m ago)"
+    );
+    expect(getRestoreSessionItemText(terminalItem, 31_000)).toBe(
+      "Closed terminal tab: Hermes old scrollback - /tmp/project (30s ago)"
+    );
   });
 });

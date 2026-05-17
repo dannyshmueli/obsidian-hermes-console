@@ -1,4 +1,4 @@
-# lean-terminal
+# Lean Hermes Obsidian Plugin (Terminal)
 
 Obsidian desktop plugin providing an embedded PTY terminal panel using xterm.js + node-pty. No external windows.
 
@@ -45,7 +45,7 @@ Plugin > View > TabManager > PtyManager chain. BinaryManager handles native modu
 
 ## Agile Artifacts
 
-Stored in the Obsidian vault at `$VAULT_PATH/01 Projects/LP Products/Lean Obsidian Terminal/`. Includes Epics, User Stories, NFRs, and Test Cases following the standard artifact format.
+Stored in the Obsidian vault at `$VAULT_PATH/01 Projects/LP Products/Lean Hermes Obsidian Plugin (Terminal)/`. Includes Epics, User Stories, NFRs, and Test Cases following the standard artifact format.
 
 ## Plugin commands
 

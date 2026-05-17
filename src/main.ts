@@ -4,20 +4,25 @@ import { TerminalView } from "./terminal-view";
 import { TerminalSettingTab, DEFAULT_SETTINGS, type TerminalPluginSettings } from "./settings";
 import { BinaryManager } from "./binary-manager";
 import { ThemeRegistry } from "./theme-registry";
-import { openRecentSessionPicker } from "./recent-sessions";
-import { refreshClaudeRegistry, resumeClaudeSession } from "./claude-sessions";
+import { openRestoreSessionPicker } from "./recent-sessions";
+import { resumeHermesSession } from "./hermes-sessions";
 import type { SavedViewState } from "./session-state";
 import type { TerminalTabManager } from "./terminal-tab-manager";
+import { ObsidianContextTracker } from "./obsidian-context-bridge";
 
 export default class TerminalPlugin extends Plugin {
   settings: TerminalPluginSettings = DEFAULT_SETTINGS;
   binaryManager!: BinaryManager;
   themeRegistry!: ThemeRegistry;
+  obsidianContextTracker!: ObsidianContextTracker;
   private ribbonEl: HTMLElement | null = null;
   private themeObserver: MutationObserver | null = null;
+  private contextRefreshRaf: number | null = null;
 
   async onload(): Promise<void> {
     await this.loadSettings();
+    this.obsidianContextTracker = new ObsidianContextTracker();
+    this.obsidianContextTracker.rememberFromApp(this.app);
 
     // Initialize binary manager
     const path = window.require("path") as typeof import("path");
@@ -39,44 +44,44 @@ export default class TerminalPlugin extends Plugin {
     });
 
     // Ribbon icon
-    this.ribbonEl = this.addRibbonIcon(this.settings.ribbonIcon, "Open terminal", () => {
+    this.ribbonEl = this.addRibbonIcon(this.settings.ribbonIcon, "Open Hermes terminal", () => {
       void this.activateTerminal();
     });
 
     // Commands
     this.addCommand({
       id: "open-terminal",
-      name: "Open terminal",
+      name: "Open Hermes terminal",
       callback: () => void this.activateTerminal(),
     });
 
     this.addCommand({
       id: "close-terminal",
-      name: "Close terminal",
+      name: "Close Hermes terminal",
       callback: () => this.closeTerminal(),
     });
 
     this.addCommand({
       id: "new-terminal-tab",
-      name: "New terminal tab",
+      name: "New Hermes terminal tab",
       callback: () => this.newTab(),
     });
 
     this.addCommand({
       id: "toggle-terminal",
-      name: "Toggle terminal",
+      name: "Toggle Hermes terminal",
       callback: () => this.toggleTerminal(),
     });
 
     this.addCommand({
       id: "open-terminal-split",
-      name: "Open terminal in new pane",
+      name: "Open Hermes terminal in new pane",
       callback: () => void this.openTerminalInNewPane(),
     });
 
     this.addCommand({
       id: "open-terminal-here",
-      name: "Open terminal in current file's directory",
+      name: "Open Hermes terminal in current file's directory",
       checkCallback: (checking) => {
         if (!this.app.workspace.getActiveFile()) return false;
         if (!checking) void this.openTerminalHere();
@@ -85,15 +90,9 @@ export default class TerminalPlugin extends Plugin {
     });
 
     this.addCommand({
-      id: "restore-recent-terminal-session",
-      name: "Restore recent terminal session",
-      callback: () => void openRecentSessionPicker(this),
-    });
-
-    this.addCommand({
-      id: "refresh-claude-session-registry",
-      name: "Refresh Claude session registry",
-      callback: () => void refreshClaudeRegistry(this),
+      id: "restore-terminal-or-hermes-session",
+      name: "Restore terminal or Hermes session",
+      callback: () => void openRestoreSessionPicker(this),
     });
 
     // Tab navigation commands
@@ -141,12 +140,11 @@ export default class TerminalPlugin extends Plugin {
       });
     }
 
-    // URI handler for clickable resume links in the registry note.
-    // Gating happens inside resumeClaudeSession — the handler is always registered
-    // so that flipping the setting doesn't require a plugin reload.
+    // URI handler for external resume links. The plugin does not generate
+    // any session-list note or write Hermes session metadata into the vault.
     this.registerObsidianProtocolHandler("lean-terminal", (params) => {
       if (params.resume) {
-        void resumeClaudeSession(this, params.resume);
+        void resumeHermesSession(this, params.resume);
       } else if (params.cwd) {
         void this.openTerminalAt(decodeURIComponent(params.cwd));
       }
@@ -159,6 +157,26 @@ export default class TerminalPlugin extends Plugin {
     // typed-then-quickly-quit scenario loses the last few seconds of activity
     // because Obsidian's requestSaveLayout is debounced.
     this.registerEvent(
+      this.app.workspace.on("active-leaf-change", () => {
+        this.refreshObsidianContextHeadersSoon();
+      })
+    );
+
+    this.registerEvent(
+      this.app.workspace.on("file-open", () => {
+        this.refreshObsidianContextHeadersSoon();
+      })
+    );
+
+    // Obsidian's public `editor-change` event tracks document edits, not every
+    // cursor/selection move. Use DOM selection/keyboard/pointer notifications to
+    // refresh the live header as the user selects text or moves the caret in a
+    // Markdown editor. The actual payload is still captured live on Enter.
+    this.registerDomEvent(activeDocument, "selectionchange", () => this.refreshObsidianContextHeadersSoon());
+    this.registerDomEvent(activeDocument, "keyup", () => this.refreshObsidianContextHeadersSoon());
+    this.registerDomEvent(activeDocument, "pointerup", () => this.refreshObsidianContextHeadersSoon());
+
+    this.registerEvent(
       this.app.workspace.on("file-menu", (menu, abstractFile) => {
         const vaultRelDir = abstractFile instanceof TFolder
           ? abstractFile.path
@@ -170,7 +188,7 @@ export default class TerminalPlugin extends Plugin {
           : adapter.getBasePath();
         menu.addItem((item) =>
           item
-            .setTitle("Open terminal here")
+            .setTitle("Open Hermes terminal here")
             .setIcon("terminal")
             .onClick(() => void this.openTerminalAt(cwd))
         );
@@ -179,6 +197,7 @@ export default class TerminalPlugin extends Plugin {
 
     this.registerEvent(
       this.app.workspace.on("quit", () => {
+        this.authorizeTerminalViewCloses();
         void this.app.workspace.requestSaveLayout.run();
       })
     );
@@ -196,11 +215,16 @@ export default class TerminalPlugin extends Plugin {
   }
 
   onunload(): void {
+    if (this.contextRefreshRaf !== null) {
+      window.cancelAnimationFrame(this.contextRefreshRaf);
+      this.contextRefreshRaf = null;
+    }
     this.themeObserver?.disconnect();
     this.themeObserver = null;
 
     // Detach after a tick to avoid disrupting the settings modal
     window.setTimeout(() => {
+      this.authorizeTerminalViewCloses();
       this.app.workspace.detachLeavesOfType(VIEW_TYPE_TERMINAL);
     }, 0);
   }
@@ -244,6 +268,12 @@ export default class TerminalPlugin extends Plugin {
     }
   }
 
+  private authorizeTerminalViewCloses(): void {
+    for (const leaf of this.app.workspace.getLeavesOfType(VIEW_TYPE_TERMINAL)) {
+      (leaf.view as TerminalView).allowNextWorkspaceClose();
+    }
+  }
+
   closeTerminal(): void {
     const leaves = this.app.workspace.getLeavesOfType(VIEW_TYPE_TERMINAL);
     if (leaves.length > 0) {
@@ -254,6 +284,7 @@ export default class TerminalPlugin extends Plugin {
         void this.saveSettings();
       }
     }
+    this.authorizeTerminalViewCloses();
     this.app.workspace.detachLeavesOfType(VIEW_TYPE_TERMINAL);
   }
 
@@ -332,7 +363,7 @@ export default class TerminalPlugin extends Plugin {
     await leaf.setViewState({
       type: VIEW_TYPE_TERMINAL,
       active: true,
-      state: { tabs: [{ name: "Terminal 1", color: "", cwd }], activeIndex: 0 },
+      state: { tabs: [{ name: "Hermes 1", color: "", cwd }], activeIndex: 0, runStartupCommand: true },
     });
     void this.app.workspace.revealLeaf(leaf);
   }
@@ -401,6 +432,22 @@ export default class TerminalPlugin extends Plugin {
     const leaves = this.app.workspace.getLeavesOfType(VIEW_TYPE_TERMINAL);
     for (const leaf of leaves) {
       (leaf.view as TerminalView).updateLineHeight();
+    }
+  }
+
+  private refreshObsidianContextHeadersSoon(): void {
+    if (this.contextRefreshRaf !== null) return;
+    this.contextRefreshRaf = window.requestAnimationFrame(() => {
+      this.contextRefreshRaf = null;
+      this.obsidianContextTracker.rememberFromApp(this.app);
+      this.updateObsidianContextHeaders();
+    });
+  }
+
+  updateObsidianContextHeaders(): void {
+    const leaves = this.app.workspace.getLeavesOfType(VIEW_TYPE_TERMINAL);
+    for (const leaf of leaves) {
+      (leaf.view as TerminalView).updateObsidianContextHeader();
     }
   }
 }

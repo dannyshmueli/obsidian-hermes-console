@@ -1,4 +1,4 @@
-# Lean Terminal
+# Lean Hermes Obsidian Plugin (Terminal)
 
 [![Release](https://img.shields.io/github/release/sdkasper/lean-obsidian-terminal?logo=obsidian&logoColor=A991D4&style=flat-square&labelColor=000000&color=25D0F7)](https://github.com/sdkasper/lean-obsidian-terminal/releases)
 [![Obsidian](https://img.shields.io/badge/Obsidian-v1.5.0+-A991D4?style=flat-square&labelColor=000000)](https://obsidian.md)
@@ -9,7 +9,9 @@
 [![License](https://img.shields.io/badge/License-MIT-007BFF?style=flat-square&labelColor=000000)](LICENSE)
 [![Discord](https://img.shields.io/badge/Discord-Join%20Server-5865F2?style=flat-square&labelColor=000000&logo=discord&logoColor=5865F2)](https://discord.gg/sbMg6PP2vq)
 
-An embedded terminal panel for [Obsidian](https://obsidian.md), powered by [xterm.js](https://xtermjs.org/) and [node-pty](https://github.com/nicedoc/node-pty). Run shell commands directly inside your vault workspace - no external windows needed.
+A Hermes-first embedded terminal panel for [Obsidian](https://obsidian.md), powered by [xterm.js](https://xtermjs.org/) and [node-pty](https://github.com/nicedoc/node-pty). It opens new tabs directly into `hermes` by default when the Hermes CLI is installed separately and available in Obsidian's PATH, so a Nous/Hermes workflow can stay inside the vault workspace - no external windows needed.
+
+This fork preserves the upstream Lean Terminal foundation and project history while adapting the visible product surface for Hermes-in-Obsidian use.
 
 **Desktop only.** Requires Obsidian 1.5.0+.
 
@@ -19,15 +21,15 @@ An embedded terminal panel for [Obsidian](https://obsidian.md), powered by [xter
 
 - Full PTY terminal (not a simple command runner) with interactive shell support
 - Auto-detects your shell: PowerShell 7 / Windows PowerShell / cmd.exe on Windows, `$SHELL` on macOS/Linux
-- Startup command: configure a command that runs automatically in every new tab once the shell is ready (e.g. `claude`, `npm run dev`)
+- Startup command: fresh new tabs run `hermes` by default once the shell is ready if the Hermes CLI is installed and in PATH. Restored tabs and resume links do not re-run the startup command
 - Clipboard support: Ctrl+V / Cmd+V paste, Ctrl+C / Cmd+C copy (with selection)
 - Clickable URLs in terminal output
 - Auto-resize as the panel resizes
-- Shift+Enter inserts a newline without submitting (muscle memory for Claude Code users)
+- Shift+Enter inserts a newline without submitting (muscle memory for Hermes and Claude-style prompts)
 
 ### Tab Management
 
-- Multiple tabs with rename, color-coding, and pinning support
+- Multiple Hermes tabs with icon rename, color-coding, and pinning support
 - Drag tabs to reorder them in the tab bar
 - Keyboard shortcuts: Next/Previous (with wrap-around), Jump to Tab 1-8, Jump to last - bindable under Settings > Hotkeys
 - Tab bar positioning: Top (default), Left, or Right side for wide-monitor layouts
@@ -55,22 +57,64 @@ An embedded terminal panel for [Obsidian](https://obsidian.md), powered by [xter
 - Session persistence: tab names, colors, working directories, and scrollback are restored when Obsidian reopens
 - Rescue recently closed tabs from the command palette (ring buffer of the last 10 sessions)
 - Notification sounds when background tab commands finish (4 sound types, adjustable volume)
-- Optional [Claude Code](https://claude.com/claude-code) integration: auto-maintained session registry with clickable Resume links and URI handler
+- Restore recently closed tabs and live Hermes CLI sessions from the command palette
+- Optional Obsidian-to-Hermes context bridge for selected text or cursor context
 
 ## Installation
 
-### Via Obsidian Community Plugins (recommended)
+The plugin needs native `node-pty` binaries after install. Community Plugins and BRAT users download them from plugin settings. Manual/local development installs them with `npm install` and copies them into the vault plugin directory with `install.mjs`.
+
+This plugin does not install the Hermes CLI. Install Hermes separately if you want the default `hermes` startup command to work.
+
+### Community Plugins (published releases)
+
+Use this path when the Hermes-facing plugin is available in Obsidian's Community Plugins directory.
 
 1. Open **Settings > Community Plugins**
-2. Search for "Lean Terminal"
+2. Search for "Lean Hermes Obsidian Plugin (Terminal)"
 3. Click **Install**
 4. Enable the plugin in **Settings > Community Plugins**
-5. Go to **Settings > Terminal > Download binaries** and click **Download** - this fetches the native terminal binary for your platform (the platform-specific `node-pty` zip from the GitHub release; Obsidian itself only uses `main.js`, `manifest.json`, and `styles.css`)
+5. Go to **Settings > Lean Hermes Obsidian Plugin (Terminal) > Download binaries** and click **Download** to fetch the native `node-pty` binary for your platform
 6. Open the terminal via the ribbon icon or command palette
 
-Or install directly: [community.obsidian.md/plugins/lean-terminal](https://community.obsidian.md/plugins/lean-terminal)
+The upstream community plugin remains available as [Lean Terminal](https://community.obsidian.md/plugins/lean-terminal).
 
-### Troubleshooting Binary Download (ARM64 Windows)
+### BRAT beta
+
+Use this path for beta builds or if the Hermes-facing plugin is not yet available in Community Plugins.
+
+1. Install the [BRAT](https://github.com/TfTHacker/obsidian42-brat) plugin if you don't have it
+2. Open **Settings > BRAT > Add Beta Plugin**
+3. Enter: `sdkasper/lean-obsidian-terminal`
+4. Enable the plugin in **Settings > Community Plugins**
+5. Go to **Settings > Lean Hermes Obsidian Plugin (Terminal) > Download binaries** and click **Download** to fetch the native `node-pty` binary for your platform
+6. Open the terminal via the ribbon icon or command palette
+
+### Manual/local development
+
+1. Clone this repository
+2. Run `npm install` to install dependencies, including local `node-pty`
+3. Run `npm run build`
+4. Run `node install.mjs "/path/to/vault"` to copy `main.js`, `manifest.json`, `styles.css`, and `node-pty` into the vault plugin directory
+5. Restart Obsidian and enable the plugin in **Settings > Community Plugins**
+
+### Verify the install
+
+- Plugin is enabled in **Settings > Community Plugins**
+- Native binaries are downloaded through plugin settings or copied by `install.mjs`
+- Terminal opens from the ribbon icon or command palette
+- Hermes CLI is installed separately and visible to Obsidian's PATH if you want Hermes autostart
+- A new terminal tab starts `hermes` by default when Hermes is available in PATH
+
+### Troubleshooting
+
+If the terminal fails to open, check the `node-pty` native module first:
+
+- Community Plugins or BRAT: run **Settings > Lean Hermes Obsidian Plugin (Terminal) > Download binaries** again
+- Manual/local development: rerun `npm install`, `npm run build`, and `node install.mjs "/path/to/vault"`
+- Restart Obsidian completely after fixing binaries or native module files
+
+#### ARM64 Windows binary download
 
 If you see "Failed to download binaries" on an ARM64 Windows device (Surface Pro X, Windows Dev Kit, etc.):
 
@@ -81,24 +125,10 @@ If you see "Failed to download binaries" on an ARM64 Windows device (Surface Pro
 5. **Try downloading binaries again**
 
 If the issue persists, check that:
+
 - You have write permissions to the plugin directory
 - Your `.obsidian` folder is not synced to a cloud service (OneDrive, iCloud, Dropbox) that may lock files during sync
 - Your antivirus software is not blocking file extraction
-
-### Via BRAT (beta releases)
-
-1. Install the [BRAT](https://github.com/TfTHacker/obsidian42-brat) plugin if you don't have it
-2. Open **Settings > BRAT > Add Beta Plugin**
-3. Enter: `sdkasper/lean-obsidian-terminal`
-4. Enable the plugin in **Settings > Community Plugins**
-5. Download binaries and enable as above
-
-### Manual Installation
-
-1. Clone this repository
-2. Run `npm install && npm run build`
-3. Run `node install.mjs "/path/to/your/vault"`
-4. Restart Obsidian and enable the plugin in **Settings > Community Plugins**
 
 ## How It Works
 
@@ -114,9 +144,9 @@ See [Settings](docs/settings.md) for all configuration options.
 
 See [Session Persistence](docs/session-persistence.md) for how tab state is saved and restored.
 
-See [Claude Code Integration](docs/claude-code-integration.md) for setup and usage.
+See [Hermes Obsidian Context Bridge](docs/hermes-obsidian-context-bridge.txt) for the optional context handoff.
 
-See [URI Handler](docs/uri-handler.md) for the `obsidian://lean-terminal` protocol reference.
+See [URI Handler](docs/uri-handler.md) for the compatible `obsidian://lean-terminal` protocol reference.
 
 See [Security](docs/security.md) for the security review summary.
 
@@ -146,9 +176,9 @@ node install.mjs     # Install to default vault (D:\LOS Test)
 
 ## Contributors
 
-This plugin is built and maintained by a dedicated community. Special thanks to:
+This Hermes-facing fork is based on Lean Terminal. Upstream project credit and contributor credit are preserved here:
 
-- **[@FarhadGSRX](https://github.com/FarhadGSRX)** - Session persistence, session rescue buffer, Claude Code integration with registry generation and resume links, color scheme catalog with themes.json support
+- **[@FarhadGSRX](https://github.com/FarhadGSRX)** - Session persistence, session rescue buffer, original Claude Code session work in upstream Lean Terminal, color scheme catalog with themes.json support
 - **[@ckelsoe](https://github.com/ckelsoe)** - Per-tab color tint customization with editable palette, wiki-link autocomplete with path-insertion modes
 - **[@c00llin](https://github.com/c00llin)** - Terminal location options (Tab Right, Split Tab Right)
 - **[@kkugot](https://github.com/kkugot)** - Emoji rendering fixes, system theme detection with terminal color reporting protocol

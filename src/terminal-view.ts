@@ -1,9 +1,13 @@
-import { FileSystemAdapter, ItemView, WorkspaceLeaf, type ViewStateResult } from "obsidian";
+import { FileSystemAdapter, ItemView, Notice, WorkspaceLeaf, type ViewStateResult } from "obsidian";
 import { VIEW_TYPE_TERMINAL } from "./constants";
 import { TerminalTabManager, type TabManagerOptions, type CreateTabOpts } from "./terminal-tab-manager";
 import { pushRecentSession } from "./recent-sessions";
 import type TerminalPlugin from "./main";
 import type { SavedViewState } from "./session-state";
+import {
+  getTerminalViewCloseBlockedMessage,
+  shouldBlockTerminalViewClose,
+} from "./terminal-session-actions";
 
 export class TerminalView extends ItemView {
   private plugin: TerminalPlugin;
@@ -11,11 +15,13 @@ export class TerminalView extends ItemView {
   private resizeObserver: ResizeObserver | null = null;
   private resizeTimer: number | null = null;
   private viewContainer: HTMLElement | null = null;
+  private originalLeafDetach: WorkspaceLeaf["detach"] | null = null;
+  private workspaceCloseAuthorized = false;
   /**
    * State passed to setState() before onOpen() has constructed the tab manager.
    * Applied in onOpen() once the manager is ready.
    */
-  private pendingState: SavedViewState | null = null;
+  private pendingState: ParsedTerminalViewState | null = null;
 
   constructor(leaf: WorkspaceLeaf, plugin: TerminalPlugin) {
     super(leaf);
@@ -27,7 +33,7 @@ export class TerminalView extends ItemView {
   }
 
   getDisplayText(): string {
-    return "Terminal";
+    return "Hermes Terminal";
   }
 
   getIcon(): string {
@@ -36,6 +42,8 @@ export class TerminalView extends ItemView {
 
   // async: satisfies ItemView.onOpen() → Promise<void>; no actual async work here
   async onOpen(): Promise<void> {
+    this.installWorkspaceCloseGuard();
+
     const container = this.containerEl.children[1] as HTMLElement;
     container.empty();
     container.addClass("terminal-view-container");
@@ -45,8 +53,11 @@ export class TerminalView extends ItemView {
     // Tab bar
     const tabBarEl = container.createDiv({ cls: "terminal-tab-bar" });
 
+    const mainAreaEl = container.createDiv({ cls: "terminal-main-area" });
+    const contextHeaderEl = mainAreaEl.createDiv({ cls: "terminal-context-header" });
+
     // Terminal host (all session containers go here)
-    const terminalHostEl = container.createDiv({ cls: "terminal-host" });
+    const terminalHostEl = mainAreaEl.createDiv({ cls: "terminal-host" });
 
     // Determine CWD — vault root
     let cwd: string;
@@ -67,6 +78,7 @@ export class TerminalView extends ItemView {
     const tabManagerOpts: TabManagerOptions = {
       app: this.app,
       tabBarEl,
+      contextHeaderEl,
       terminalHostEl,
       settings: this.plugin.settings,
       cwd,
@@ -76,6 +88,8 @@ export class TerminalView extends ItemView {
       onTabsEmpty: () => this.leaf.detach(),
       requestSaveLayout: () => { void this.app.workspace.requestSaveLayout(); },
       onSessionClose: (tab) => { void pushRecentSession(this.plugin, tab); },
+      contextTracker: this.plugin.obsidianContextTracker,
+      saveSettings: () => this.plugin.saveSettings(),
     };
     this.tabManager = new TerminalTabManager(tabManagerOpts);
 
@@ -114,8 +128,34 @@ export class TerminalView extends ItemView {
   async onClose(): Promise<void> {
     if (this.resizeTimer) window.clearTimeout(this.resizeTimer);
     this.resizeObserver?.disconnect();
+    this.restoreWorkspaceCloseGuard();
     this.tabManager?.destroyAll();
     this.tabManager = null;
+  }
+
+  allowNextWorkspaceClose(): void {
+    this.workspaceCloseAuthorized = true;
+  }
+
+  private installWorkspaceCloseGuard(): void {
+    if (this.originalLeafDetach) return;
+
+    const original = this.leaf.detach.bind(this.leaf) as WorkspaceLeaf["detach"];
+    this.originalLeafDetach = original;
+    this.leaf.detach = ((...args: Parameters<WorkspaceLeaf["detach"]>) => {
+      const sessionCount = this.tabManager?.getSessions().length ?? 0;
+      if (shouldBlockTerminalViewClose(sessionCount, this.workspaceCloseAuthorized)) {
+        new Notice(getTerminalViewCloseBlockedMessage());
+        return Promise.resolve();
+      }
+      return original(...args);
+    }) as WorkspaceLeaf["detach"];
+  }
+
+  private restoreWorkspaceCloseGuard(): void {
+    if (!this.originalLeafDetach) return;
+    this.leaf.detach = this.originalLeafDetach;
+    this.originalLeafDetach = null;
   }
 
   createNewTab(opts?: CreateTabOpts): void {
@@ -136,6 +176,10 @@ export class TerminalView extends ItemView {
 
   updateLineHeight(): void {
     this.tabManager?.updateLineHeight();
+  }
+
+  updateObsidianContextHeader(): void {
+    this.tabManager?.updateObsidianContextHeader();
   }
 
   applyTabBarPosition(): void {
@@ -192,6 +236,7 @@ export class TerminalView extends ItemView {
         bufferSerial: tab.bufferSerial,
         resumeCommand: tab.resumeCommand,
         pinned: tab.pinned,
+        restored: !state.runStartupCommand,
       });
     }
 
@@ -205,10 +250,18 @@ export class TerminalView extends ItemView {
  * Validate and narrow an unknown state value to SavedViewState.
  * Returns null for missing, malformed, or empty state.
  */
-function parseSavedViewState(state: unknown): SavedViewState | null {
+interface ParsedTerminalViewState extends SavedViewState {
+  /**
+   * Transient view-state hint used by explicit "open here" launches. Workspace
+   * restore state does not include it, so restored tabs remain startup-safe.
+   */
+  runStartupCommand?: boolean;
+}
+
+function parseSavedViewState(state: unknown): ParsedTerminalViewState | null {
   if (!state || typeof state !== "object") return null;
-  const s = state as Partial<SavedViewState>;
+  const s = state as Partial<ParsedTerminalViewState>;
   if (!Array.isArray(s.tabs) || s.tabs.length === 0) return null;
   const activeIndex = typeof s.activeIndex === "number" ? s.activeIndex : 0;
-  return { tabs: s.tabs, activeIndex };
+  return { tabs: s.tabs, activeIndex, runStartupCommand: s.runStartupCommand === true };
 }

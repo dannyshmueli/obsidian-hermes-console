@@ -1,4 +1,4 @@
-import { Notice, App, FileSystemAdapter } from "obsidian";
+import { Notice, App, FileSystemAdapter, setIcon } from "obsidian";
 import type { AppWithDrag, ElectronWithWebUtils, FileWithPath } from "./obsidian-internals";
 import { Terminal, type ILink } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
@@ -15,7 +15,22 @@ import type { TerminalPluginSettings, NotificationSound } from "./settings";
 import type { BinaryManager } from "./binary-manager";
 import type { SavedTab } from "./session-state";
 import { WikiLinkAutocomplete, type AutocompleteEntry } from "./wikilink-autocomplete";
-import { getPtySequenceForKeyboardEvent } from "./terminal-key-sequences";
+import {
+  getTerminalEnterHandlingPlan,
+} from "./terminal-key-sequences";
+import {
+  ObsidianContextTracker,
+  buildObsidianContextBridgePayload,
+  describeObsidianContextForHeader,
+  writeObsidianContextBridgePayloadSync,
+  type ObsidianContextBridgePayload,
+} from "./obsidian-context-bridge";
+import {
+  getCloseButtonAction,
+  getCloseConfirmationMessage,
+  isDestructiveKillConfirmed,
+} from "./terminal-session-actions";
+import { shouldRunStartupCommandForTab } from "./startup-command";
 
 const SEARCH_DECORATIONS = {
   matchBackground: "#ffff0050",
@@ -71,7 +86,7 @@ export interface TerminalSession {
   color: string;
   /** Working directory the shell was spawned in. */
   cwd: string;
-  /** Command to re-run on restore (e.g. "claude --resume <uuid>"). */
+  /** Command to run after shell spawn (e.g. "hermes --resume <session-id>"). */
   resumeCommand?: string;
   /** Disposables for parser/event handlers — cleaned up on close. */
   parserDisposables: IDisposable[];
@@ -85,6 +100,9 @@ export interface TerminalSession {
   searchAddon: SearchAddon;
   overlayEl: HTMLElement;
   toggleSearch: () => void;
+  removedFromTabs: boolean;
+  /** Original createTab options, retained only for startup/resume gating after spawn. */
+  creationOpts?: CreateTabOpts;
 }
 
 /** Options for restoring a tab from persisted state (via setState). */
@@ -95,6 +113,8 @@ export interface CreateTabOpts {
   bufferSerial?: string;
   resumeCommand?: string;
   pinned?: boolean;
+  /** Transient creation hint: restored tabs must not run the global startup command. */
+  restored?: boolean;
 }
 
 /** Play a notification sound via the Web Audio API. */
@@ -219,6 +239,10 @@ function quotePath(rawPath: string, shellPath: string): string {
   return `"${rawPath}"`;
 }
 
+function sanitizeOscTitle(title: string): string {
+  return title.replace(/[\x00-\x1f\x7f]/g, " ").slice(0, 120);
+}
+
 function extractDropPath(e: DragEvent, app: App): string | null {
   // OS file drag via text/uri-list (file:// URLs in Electron)
   const uriList = e.dataTransfer?.getData("text/uri-list");
@@ -257,6 +281,7 @@ function extractDropPath(e: DragEvent, app: App): string | null {
 export interface TabManagerOptions {
   app: App;
   tabBarEl: HTMLElement;
+  contextHeaderEl?: HTMLElement;
   terminalHostEl: HTMLElement;
   settings: TerminalPluginSettings;
   cwd: string;
@@ -267,6 +292,8 @@ export interface TabManagerOptions {
   onTabsEmpty?: () => void;
   requestSaveLayout?: () => void;
   onSessionClose?: (tab: SavedTab) => void;
+  contextTracker?: ObsidianContextTracker;
+  saveSettings?: () => void | Promise<void>;
 }
 
 export class TerminalTabManager {
@@ -283,15 +310,20 @@ export class TerminalTabManager {
   private onTabsEmpty?: () => void;
   private requestSaveLayout?: () => void;
   private onSessionClose?: (tab: SavedTab) => void;
+  private contextTracker?: ObsidianContextTracker;
+  private contextHeaderEl?: HTMLElement;
+  private saveSettings?: () => void | Promise<void>;
   /** Set true by any terminal write/resize; consumed by the view's periodic save timer. */
   private outputDirty = false;
   private sessionCounter = 0;
+  private contextSubmitSequence = 0;
   private dragSrcId: string | null = null;
   private readonly app: App;
 
   constructor(opts: TabManagerOptions) {
     this.app = opts.app;
     this.tabBarEl = opts.tabBarEl;
+    this.contextHeaderEl = opts.contextHeaderEl;
     this.terminalHostEl = opts.terminalHostEl;
     this.settings = opts.settings;
     this.cwd = opts.cwd;
@@ -302,6 +334,9 @@ export class TerminalTabManager {
     this.onTabsEmpty = opts.onTabsEmpty;
     this.requestSaveLayout = opts.requestSaveLayout;
     this.onSessionClose = opts.onSessionClose;
+    this.contextTracker = opts.contextTracker;
+    this.saveSettings = opts.saveSettings;
+    this.renderContextHeader();
   }
 
   /** Capture a session's current state as a SavedTab (used on close for recents). */
@@ -324,6 +359,76 @@ export class TerminalTabManager {
     const was = this.outputDirty;
     this.outputDirty = false;
     return was;
+  }
+
+  updateObsidianContextHeader(): void {
+    this.renderContextHeader();
+  }
+
+  private captureObsidianContextForSubmit(id: string, attachEnabled: boolean): void {
+    if (!this.contextTracker) return;
+    const session = this.sessions.find((s) => s.id === id && !s.removedFromTabs);
+    if (!session) return;
+
+    this.contextSubmitSequence++;
+    const payload = buildObsidianContextBridgePayload({
+      app: this.app,
+      tracker: this.contextTracker,
+      submitSequence: this.contextSubmitSequence,
+      terminalId: session.id,
+      terminalTitle: session.name,
+      attachEnabled,
+      now: new Date(),
+    });
+
+    try {
+      writeObsidianContextBridgePayloadSync(payload);
+      this.renderContextHeader();
+    } catch (err) {
+      console.error("Terminal: failed to write Obsidian Hermes context bridge", err);
+      new Notice("Failed to write Obsidian context for Hermes.");
+    }
+  }
+
+  private buildObsidianContextPreviewPayload(): ObsidianContextBridgePayload | null {
+    if (!this.contextTracker) return null;
+    const session = this.getActiveSession();
+    if (!session) return null;
+
+    return buildObsidianContextBridgePayload({
+      app: this.app,
+      tracker: this.contextTracker,
+      submitSequence: this.contextSubmitSequence,
+      terminalId: session.id,
+      terminalTitle: session.name,
+      attachEnabled: this.settings.sendObsidianContextToHermes,
+      now: new Date(),
+    });
+  }
+
+  private renderContextHeader(): void {
+    if (!this.contextHeaderEl) return;
+
+    this.contextHeaderEl.empty();
+    const toggle = this.contextHeaderEl.createEl("button", {
+      cls: "terminal-context-toggle",
+      text: this.settings.sendObsidianContextToHermes ? "Context ON" : "Context OFF",
+    });
+    toggle.toggleClass("terminal-context-toggle--on", this.settings.sendObsidianContextToHermes);
+    toggle.addEventListener("click", () => {
+      this.settings.sendObsidianContextToHermes = !this.settings.sendObsidianContextToHermes;
+      void this.saveSettings?.();
+      this.renderContextHeader();
+    });
+
+    const previewPayload = this.buildObsidianContextPreviewPayload();
+    this.contextHeaderEl.createSpan({
+      cls: "terminal-context-status",
+      text: describeObsidianContextForHeader(
+        this.settings.sendObsidianContextToHermes,
+        previewPayload,
+      ),
+    });
   }
 
   /**
@@ -616,14 +721,23 @@ export class TerminalTabManager {
         return false;
       }
 
-      // Shift+Enter: send modified Enter so TUIs can insert a newline
-      // without treating it as a plain Enter/submit.
-      const keySequence = getPtySequenceForKeyboardEvent(e);
-      if (keySequence) {
-        e.preventDefault();
-        const s = this.sessions.find((s) => s.id === id);
-        if (s) s.pty.write(keySequence);
-        return false;
+      const enterHandlingPlan = getTerminalEnterHandlingPlan(
+        e,
+        this.settings.sendObsidianContextToHermes,
+      );
+      if (enterHandlingPlan.length > 0) {
+        for (const step of enterHandlingPlan) {
+          if (step.type === "write-obsidian-context-bridge") {
+            this.captureObsidianContextForSubmit(id, step.attachEnabled);
+          } else if (step.type === "write-pty-sequence") {
+            e.preventDefault();
+            const s = this.sessions.find((s) => s.id === id);
+            if (s) s.pty.write(step.sequence);
+            return false;
+          } else {
+            return true;
+          }
+        }
       }
 
       // Paste: Ctrl+V / Cmd+V / Shift+Insert
@@ -710,7 +824,7 @@ export class TerminalTabManager {
 
       if (!this.binaryManager.isReady()) {
         terminal.write("\r\n\x1b[33mTerminal binaries not installed.\x1b[0m\r\n");
-        terminal.write("Go to Settings → Terminal to download them.\r\n");
+        terminal.write("Go to Settings → Lean Hermes Obsidian Plugin (Terminal) to download them.\r\n");
         return;
       }
 
@@ -738,13 +852,25 @@ export class TerminalTabManager {
         this.notifyCompletion(session, exitInfo.exitCode);
         this.forceCloseTab(session.id);
       });
+
+      // Startup/resume commands must be armed after the PTY is spawned and after
+      // PTY output is wired into xterm. Otherwise fast shells can emit the first
+      // prompt before the OSC handler exists, and fallback timers can fire before
+      // there is a live process to receive the command.
+      if (shouldRunStartupCommandForTab(session.creationOpts) && this.settings.startupCommand) {
+        this.setupStartupCommand(session, terminal, this.settings.startupCommand);
+      }
+
+      if (session.resumeCommand) {
+        this.setupAutoResume(session, terminal);
+      }
     }); });
   }
 
   createTab(opts?: CreateTabOpts): TerminalSession {
     this.sessionCounter++;
     const id = `terminal-${this.sessionCounter}`;
-    const name = opts?.name ?? `Terminal ${this.sessionCounter}`;
+    const name = opts?.name ?? `Hermes ${this.sessionCounter}`;
     const sessionCwd = opts?.cwd ?? this.cwd;
 
     const containerEl = this.terminalHostEl.createDiv({ cls: "terminal-session" });
@@ -788,6 +914,8 @@ export class TerminalTabManager {
       searchAddon,
       overlayEl,
       toggleSearch,
+      removedFromTabs: false,
+      creationOpts: opts,
     };
     session.parserDisposables.push(resultsDisposable);
 
@@ -802,29 +930,19 @@ export class TerminalTabManager {
     this.renderTabBar();
     this.requestSaveLayout?.();
 
-    // Fresh new tabs (no persisted buffer, no saved resumeCommand) run the global
-    // startup command. A separate path (not session.resumeCommand) keeps it out of
-    // serialized workspace state so it never re-fires on restore.
-    if (!session.resumeCommand && !opts?.bufferSerial && this.settings.startupCommand) {
-      this.setupStartupCommand(session, terminal, this.settings.startupCommand);
-    }
-
-    // Install the auto-resume OSC listener before the PTY spawns so the first
-    // prompt's OSC 133 A is caught. Any tab with a `resumeCommand` set runs it
-    // once the shell is ready. Callers that don't want this just omit the field.
-    if (session.resumeCommand) {
-      this.setupAutoResume(session, terminal);
-    }
+    // Startup and resume commands are armed inside spawnPty after the shell
+    // process exists and PTY output is wired into xterm.
 
     this.spawnPty(session, terminal, fitAddon, sessionCwd);
     return session;
   }
 
   switchTab(id: string): void {
+    if (!this.sessions.some((s) => s.id === id && !s.removedFromTabs)) return;
     this.activeId = id;
 
     for (const session of this.sessions) {
-      if (session.id === id) {
+      if (session.id === id && !session.removedFromTabs) {
         session.containerEl.removeClass("terminal-session-hidden");
         // One rAF is enough here: the element is already in the DOM, we just
         // need to wait for the CSS visibility change to be painted before fit.
@@ -843,6 +961,7 @@ export class TerminalTabManager {
     }
 
     this.renderTabBar();
+    this.renderContextHeader();
     this.onActiveChange?.();
     this.requestSaveLayout?.();
   }
@@ -868,8 +987,9 @@ export class TerminalTabManager {
     this.teardownSession(session);
     this.sessions.splice(idx, 1);
     if (this.activeId === id) {
-      if (this.sessions.length > 0) {
-        this.switchTab(this.sessions[Math.min(idx, this.sessions.length - 1)].id);
+      const visible = this.getVisibleSessions();
+      if (visible.length > 0) {
+        this.switchTab(visible[Math.min(idx, visible.length - 1)].id);
       } else {
         this.activeId = null;
       }
@@ -889,16 +1009,22 @@ export class TerminalTabManager {
     const session = this.sessions[idx];
     if (session.pinned) return;
 
-    // Capture for recents BEFORE destroying (serialize needs a live xterm)
+    if (getCloseButtonAction() !== "confirm-close") return;
+
+    if (!window.confirm(getCloseConfirmationMessage(session.name))) {
+      return;
+    }
+
     this.onSessionClose?.(this.captureSession(session));
     this.teardownSession(session);
     this.sessions.splice(idx, 1);
 
     // Switch to adjacent tab if we closed the active one
     if (this.activeId === id) {
-      if (this.sessions.length > 0) {
-        const newIdx = Math.min(idx, this.sessions.length - 1);
-        this.switchTab(this.sessions[newIdx].id);
+      const visible = this.getVisibleSessions();
+      if (visible.length > 0) {
+        const newIdx = Math.min(idx, visible.length - 1);
+        this.switchTab(visible[newIdx].id);
       } else {
         this.activeId = null;
       }
@@ -925,11 +1051,15 @@ export class TerminalTabManager {
   }
 
   getActiveSession(): TerminalSession | null {
-    return this.sessions.find((s) => s.id === this.activeId) || null;
+    return this.sessions.find((s) => s.id === this.activeId && !s.removedFromTabs) || null;
+  }
+
+  private getVisibleSessions(): TerminalSession[] {
+    return this.sessions.filter((s) => !s.removedFromTabs);
   }
 
   getSessions(): TerminalSession[] {
-    return this.sessions;
+    return this.getVisibleSessions();
   }
 
   /**
@@ -937,18 +1067,19 @@ export class TerminalTabManager {
    * Buffer serialization is gated on the persistBuffer setting.
    */
   serializeSessions(): SavedTab[] {
-    return this.sessions.map((s) => this.captureSession(s));
+    return this.getVisibleSessions().map((s) => this.captureSession(s));
   }
 
   /** Index of the currently active session (0-based), or -1 if none. */
   getActiveIndex(): number {
-    return this.sessions.findIndex((s) => s.id === this.activeId);
+    return this.getVisibleSessions().findIndex((s) => s.id === this.activeId);
   }
 
   /** Activate a session by its position in the sessions array. */
   switchToIndex(index: number): void {
-    if (index < 0 || index >= this.sessions.length) return;
-    this.switchTab(this.sessions[index].id);
+    const visible = this.getVisibleSessions();
+    if (index < 0 || index >= visible.length) return;
+    this.switchTab(visible[index].id);
   }
 
   /**
@@ -959,7 +1090,7 @@ export class TerminalTabManager {
   destroyAll(saveToRecents = true): void {
     activeDocument.querySelector(".terminal-tab-context-menu")?.remove();
     for (const session of this.sessions) {
-      if (saveToRecents) {
+      if (saveToRecents && !session.removedFromTabs) {
         this.onSessionClose?.(this.captureSession(session));
       }
       this.teardownSession(session);
@@ -992,6 +1123,7 @@ export class TerminalTabManager {
     const commit = () => {
       const newName = input.value.trim() || session.name;
       session.name = newName;
+      session.terminal.write(`${ESC}]0;${sanitizeOscTitle(newName)}\x07`);
       this.renderTabBar();
       this.requestSaveLayout?.();
     };
@@ -1006,6 +1138,42 @@ export class TerminalTabManager {
         input.blur();
       }
     });
+  }
+
+  private confirmAndKillTab(id: string): void {
+    const idx = this.sessions.findIndex((s) => s.id === id);
+    if (idx === -1) return;
+    const session = this.sessions[idx];
+    const confirmation = window.prompt(
+      `Destructively kill terminal "${session.name}"? Type the exact terminal title to confirm.`,
+    );
+    if (!isDestructiveKillConfirmed(session.name, confirmation)) {
+      new Notice("Terminal kill cancelled.");
+      return;
+    }
+
+    if (!session.removedFromTabs) {
+      this.onSessionClose?.(this.captureSession(session));
+    }
+    this.teardownSession(session);
+    this.sessions.splice(idx, 1);
+
+    if (this.activeId === id) {
+      const visible = this.getVisibleSessions();
+      if (visible.length > 0) {
+        this.switchTab(visible[Math.min(idx, visible.length - 1)].id);
+      } else {
+        this.activeId = null;
+      }
+    }
+
+    if (this.sessions.length === 0 && this.onTabsEmpty) {
+      this.onTabsEmpty();
+      return;
+    }
+
+    this.renderTabBar();
+    this.requestSaveLayout?.();
   }
 
   private showTabContextMenu(e: MouseEvent, sessionId: string, labelEl: HTMLElement): void {
@@ -1036,6 +1204,15 @@ export class TerminalTabManager {
       session.pinned = !session.pinned;
       this.renderTabBar();
       menu.remove();
+    });
+
+    const killItem = menu.createDiv({
+      cls: "terminal-ctx-item terminal-ctx-item-danger",
+      text: "Kill process...",
+    });
+    killItem.addEventListener("click", () => {
+      menu.remove();
+      this.confirmAndKillTab(sessionId);
     });
 
     // Color submenu
@@ -1109,7 +1286,7 @@ export class TerminalTabManager {
   private renderTabBar(): void {
     this.tabBarEl.empty();
 
-    for (const session of this.sessions) {
+    for (const session of this.getVisibleSessions()) {
       const classes = ["terminal-tab"];
       if (session.id === this.activeId) classes.push("active");
       if (session.pinned) classes.push("terminal-tab--pinned");
@@ -1137,6 +1314,16 @@ export class TerminalTabManager {
         tab.createSpan({ cls: "terminal-tab-pin-icon", text: "\u{1F512}" });
       }
 
+      const renameBtn = tab.createEl("button", { cls: "terminal-tab-rename" });
+      renameBtn.type = "button";
+      renameBtn.title = "Rename tab";
+      renameBtn.setAttribute("aria-label", `Rename tab ${session.name}`);
+      setIcon(renameBtn, "pencil");
+      renameBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        this.renameTab(session.id, label);
+      });
+
       if (!session.pinned) {
         const closeBtn = tab.createSpan({ cls: "terminal-tab-close", text: "×" });
         closeBtn.addEventListener("click", (e) => {
@@ -1145,7 +1332,7 @@ export class TerminalTabManager {
         });
       }
 
-      if (this.sessions.length > 1) {
+      if (this.getVisibleSessions().length > 1) {
         tab.draggable = true;
 
         tab.addEventListener("dragstart", (e) => {

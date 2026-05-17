@@ -1,9 +1,9 @@
 {
   "id": "lean-terminal",
-  "name": "Lean Terminal",
+  "name": "Lean Hermes Obsidian Plugin (Terminal)",
   "version": "1.1.0",
   "minAppVersion": "1.7.2",
-  "description": "Embedded terminal panel powered by xterm.js and node-pty - no external windows.",
-  "author": "LeanProductivity",
+  "description": "Hermes-first Obsidian terminal powered by xterm.js and node-pty.",
+  "author": "LeanProductivity; Hermes-facing fork by Nous",
   "isDesktopOnly": true
 }
