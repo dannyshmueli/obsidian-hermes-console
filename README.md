@@ -11,9 +11,34 @@
 
 Hermes Console brings the [Hermes Agent](https://github.com/NousResearch/hermes-agent) workflow into [Obsidian](https://obsidian.md). It gives your vault a real embedded terminal, launches `hermes` by default when the Hermes CLI is installed, and can hand selected note context or cursor context to the Hermes turn without copy-paste.
 
-Use it when you want to think, write, research, and run Hermes from the same Obsidian workspace instead of bouncing between your notes and an external terminal window.
+Highlight a paragraph in Obsidian, press Enter in Hermes Console, and ask Hermes to rewrite, sharpen, research, or challenge that exact text. Selection in Obsidian becomes context in Hermes.
+
+Already use Hermes? Install Hermes Console with BRAT: add `dannyshmueli/obsidian-hermes-console`, enable it, click **Download binaries**, open the console, and press Enter on your next Hermes prompt.
+
+Full install instructions: https://github.com/dannyshmueli/obsidian-hermes-console#installation
 
 Hermes Console is built on a fork of Lean Terminal. We preserve upstream credit and license history, but this README now describes the Hermes Console product, roadmap, and Obsidian-to-Hermes workflow.
+
+## Quick start
+
+### If you already use Hermes
+
+1. Install the [BRAT](https://github.com/TfTHacker/obsidian42-brat) Obsidian plugin.
+2. In Obsidian, open **Settings > BRAT > Add Beta Plugin**.
+3. Paste `dannyshmueli/obsidian-hermes-console`.
+4. Enable **Hermes Console** in **Settings > Community Plugins**.
+5. Open **Settings > Hermes Console > Download binaries** and click **Download**.
+6. Open Hermes Console from the ribbon icon or command palette.
+7. Highlight text in any note, type a prompt in Hermes Console, and press Enter.
+
+Hermes Console does not install Hermes itself. If `hermes` is already available in your shell, new console tabs start Hermes automatically.
+
+### If you are new to Hermes
+
+1. Install Hermes Agent from https://github.com/NousResearch/hermes-agent.
+2. Run `hermes setup` in your normal terminal and confirm `hermes` starts.
+3. Install Hermes Console with the BRAT steps above.
+4. Open Hermes Console inside Obsidian and start working from your notes.
 
 ## Architecture: one Obsidian plugin, one Hermes companion, one bridge file
 
@@ -95,9 +120,11 @@ End-to-end selected-text/cursor behavior requires all three pieces: Obsidian cap
 
 ## Installation
 
+Fast path while Community Plugins review is pending: install with BRAT, add `dannyshmueli/obsidian-hermes-console`, enable Hermes Console, then click **Settings > Hermes Console > Download binaries**.
+
 The plugin needs native `node-pty` binaries after install. Community Plugins and BRAT users download them from plugin settings. Manual/local development installs them with `npm install` and copies them into the vault plugin directory with `install.mjs`.
 
-This plugin does not install the Hermes CLI. Install Hermes separately if you want the default `hermes` startup command to work.
+Hermes Console does not install the Hermes CLI. Install Hermes separately if you want the default `hermes` startup command to work.
 
 ### Community Plugins (published releases)
 
