@@ -251,7 +251,7 @@ export class TerminalSettingTab extends PluginSettingTab {
     new Setting(containerEl).setName("Hermes Console binary").setHeading();
 
     new Setting(containerEl)
-      .setName(`Hermes Console for Obsidian Plan v${this.plugin.manifest.version}`);
+      .setName(`Hermes Console v${this.plugin.manifest.version}`);
 
     const bm = this.plugin.binaryManager;
     const { platform, arch } = bm.getPlatformInfo();
@@ -626,7 +626,7 @@ export class TerminalSettingTab extends PluginSettingTab {
           const count = this.plugin.themeRegistry.getNames().length;
           const errors = this.plugin.themeRegistry.getUserLoadErrors();
           if (errors.length === 0) {
-            new Notice(`Hermes Console for Obsidian Plan: Themes reloaded (${count} total).`);
+            new Notice(`Hermes Console: Themes reloaded (${count} total).`);
           }
           // If there were errors, the registry's load() already showed its own Notice.
         });

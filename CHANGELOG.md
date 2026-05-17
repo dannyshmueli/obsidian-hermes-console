@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to Hermes Console for Obsidian Plan are documented here.
+All notable changes to Hermes Console are documented here.
 
 ## 1.1.0 - May 15, 2026
 

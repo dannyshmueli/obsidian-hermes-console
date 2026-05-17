@@ -102,7 +102,7 @@ function formatDate(isoString) {
  */
 function buildChangelog(releases) {
   let content = '# Changelog\n\n';
-  content += 'All notable changes to Hermes Console for Obsidian Plan are documented here.\n\n';
+  content += 'All notable changes to Hermes Console are documented here.\n\n';
 
   for (const release of releases) {
     const version = release.tag_name;

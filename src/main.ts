@@ -153,7 +153,7 @@ export default class TerminalPlugin extends Plugin {
 
     // URI handler for external resume links. The plugin does not generate
     // any session-list note or write Hermes session metadata into the vault.
-    this.registerObsidianProtocolHandler("lean-terminal", (params) => {
+    this.registerObsidianProtocolHandler("hermes-console", (params) => {
       if (params.resume) {
         void resumeHermesSession(this, params.resume);
       } else if (params.cwd) {

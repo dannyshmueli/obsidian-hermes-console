@@ -1,9 +1,23 @@
 Hermes Obsidian context bridge
 ==============================
 
-Hermes Console for Obsidian Plan writes the current Obsidian attachment state to:
+Hermes Console writes the current Obsidian attachment state to:
 
   <vault>/.obsidian/hermes/context.json
+
+This bridge is a file, not a second Obsidian plugin. The architecture is:
+
+  1. Obsidian plugin: Hermes Console captures selected text or cursor context
+     from the active note and writes the bridge file.
+  2. Bridge file: .obsidian/hermes/context.json stores the latest attach/null
+     marker for the active vault.
+  3. Hermes companion integration: hermes/obsidian_context_bridge.js runs inside
+     Hermes, reads the bridge, injects context with pre_llm_call, and exposes
+     obsidian_context() for large selections.
+
+End-to-end context requires all three pieces. If the JSON file updates but
+Hermes does not see the context, debug the Hermes companion loading/env wiring;
+do not add another Obsidian plugin.
 
 Plain Enter always writes a fresh marker before the PTY receives Enter. When
 "Send Obsidian context to Hermes" is off, the marker has attach.enabled=false

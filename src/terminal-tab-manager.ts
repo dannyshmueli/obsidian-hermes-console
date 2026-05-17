@@ -22,6 +22,7 @@ import {
   ObsidianContextTracker,
   buildObsidianContextBridgePayload,
   describeObsidianContextForHeader,
+  resolveObsidianContextBridgePath,
   writeObsidianContextBridgePayloadSync,
   type ObsidianContextBridgePayload,
 } from "./obsidian-context-bridge";
@@ -829,12 +830,14 @@ export class TerminalTabManager {
 
       if (!this.binaryManager.isReady()) {
         terminal.write("\r\n\x1b[33mConsole binaries not installed.\x1b[0m\r\n");
-        terminal.write("Go to Settings → Hermes Console for Obsidian Plan to download them.\r\n");
+        terminal.write("Go to Settings → Hermes Console to download them.\r\n");
         return;
       }
 
       try {
-        pty.spawn(this.settings.shellPath, sessionCwd, cols, rows);
+        pty.spawn(this.settings.shellPath, sessionCwd, cols, rows, {
+          OBSIDIAN_CONTEXT_BRIDGE_PATH: resolveObsidianContextBridgePath(this.app),
+        });
       } catch (err) {
         const message = err instanceof Error ? err.message : "unknown error";
         console.error("Terminal: failed to spawn shell", err);

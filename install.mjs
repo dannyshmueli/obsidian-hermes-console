@@ -5,11 +5,11 @@
  * Default vault: D:\LOS Test
  */
 
-import { cpSync, mkdirSync, existsSync } from "fs";
+import { chmodSync, cpSync, mkdirSync, existsSync } from "fs";
 import { resolve, join } from "path";
 
 const vaultPath = process.argv[2] || "D:\\LOS Test";
-const pluginDir = join(vaultPath, ".obsidian", "plugins", "lean-terminal");
+const pluginDir = join(vaultPath, ".obsidian", "plugins", "hermes-console");
 
 if (!existsSync(join(vaultPath, ".obsidian"))) {
   console.error(`Error: ${vaultPath} does not appear to be an Obsidian vault (no .obsidian folder)`);
@@ -21,7 +21,7 @@ const srcDir = resolve(import.meta.dirname);
 // Create plugin directory
 mkdirSync(pluginDir, { recursive: true });
 
-// Copy essential files
+// Copy essential plugin files
 const files = ["main.js", "manifest.json", "styles.css"];
 for (const file of files) {
   const src = join(srcDir, file);
@@ -32,6 +32,16 @@ for (const file of files) {
   cpSync(src, join(pluginDir, file));
   console.log(`  Copied ${file}`);
 }
+
+// Copy Hermes companion integration used by the context bridge.
+const hermesCompanion = join(srcDir, "hermes", "obsidian_context_bridge.js");
+if (!existsSync(hermesCompanion)) {
+  console.error("Error: hermes/obsidian_context_bridge.js not found.");
+  process.exit(1);
+}
+mkdirSync(join(pluginDir, "hermes"), { recursive: true });
+cpSync(hermesCompanion, join(pluginDir, "hermes", "obsidian_context_bridge.js"));
+console.log("  Copied hermes/obsidian_context_bridge.js");
 
 // Copy node-pty (native module needed at runtime)
 const nodePtySrc = join(srcDir, "node_modules", "node-pty");
@@ -53,6 +63,8 @@ if (existsSync(nodePtySrc)) {
   let binaryWarning = false;
   try {
     cpSync(join(nodePtySrc, "prebuilds"), join(nodePtyDest, "prebuilds"), { recursive: true });
+    const spawnHelper = join(nodePtyDest, "prebuilds", "darwin-arm64", "spawn-helper");
+    if (existsSync(spawnHelper)) chmodSync(spawnHelper, 0o755);
   } catch {
     binaryWarning = true;
   }
@@ -81,4 +93,4 @@ if (existsSync(nodePtySrc)) {
 }
 
 console.log(`\nPlugin installed to: ${pluginDir}`);
-console.log("Restart Obsidian and enable the 'Terminal' plugin in Settings > Community Plugins.");
+console.log("Restart Obsidian and enable the 'Hermes Console' plugin in Settings > Community Plugins.");

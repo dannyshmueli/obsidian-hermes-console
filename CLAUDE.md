@@ -1,4 +1,4 @@
-# Hermes Console for Obsidian Plan
+# Hermes Console
 
 Obsidian desktop plugin providing an embedded PTY terminal panel using xterm.js + node-pty. No external windows.
 
@@ -45,7 +45,7 @@ Plugin > View > TabManager > PtyManager chain. BinaryManager handles native modu
 
 ## Agile Artifacts
 
-Stored in the Obsidian vault at `$VAULT_PATH/01 Projects/LP Products/Hermes Console for Obsidian Plan/`. Includes Epics, User Stories, NFRs, and Test Cases following the standard artifact format.
+Stored in the Obsidian vault at `$VAULT_PATH/01 Projects/LP Products/Hermes Console/`. Includes Epics, User Stories, NFRs, and Test Cases following the standard artifact format.
 
 ## Plugin commands
 
