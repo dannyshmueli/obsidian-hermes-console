@@ -1,0 +1,10 @@
+manifest_version: 1
+name: obsidian-context-bridge
+version: 0.1.0
+description: "Hermes plugin for Obsidian note context from Hermes Console."
+author: Danny Shmueli
+kind: standalone
+provides_hooks:
+  - pre_llm_call
+provides_tools:
+  - obsidian_context
