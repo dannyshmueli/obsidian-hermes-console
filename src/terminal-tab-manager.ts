@@ -828,8 +828,8 @@ export class TerminalTabManager {
       const rows = terminal.rows || 24;
 
       if (!this.binaryManager.isReady()) {
-        terminal.write("\r\n\x1b[33mTerminal binaries not installed.\x1b[0m\r\n");
-        terminal.write("Go to Settings → Lean Hermes Obsidian Plugin (Terminal) to download them.\r\n");
+        terminal.write("\r\n\x1b[33mConsole binaries not installed.\x1b[0m\r\n");
+        terminal.write("Go to Settings → Hermes Console for Obsidian Plan to download them.\r\n");
         return;
       }
 

@@ -248,10 +248,10 @@ export class TerminalSettingTab extends PluginSettingTab {
   }
 
   private renderBinarySection(containerEl: HTMLElement): void {
-    new Setting(containerEl).setName("Hermes terminal binary").setHeading();
+    new Setting(containerEl).setName("Hermes Console binary").setHeading();
 
     new Setting(containerEl)
-      .setName(`Lean Hermes Obsidian Plugin (Terminal) v${this.plugin.manifest.version}`);
+      .setName(`Hermes Console for Obsidian Plan v${this.plugin.manifest.version}`);
 
     const bm = this.plugin.binaryManager;
     const { platform, arch } = bm.getPlatformInfo();
@@ -283,7 +283,7 @@ export class TerminalSettingTab extends PluginSettingTab {
             btn.setDisabled(true);
             try {
               await bm.download();
-              new Notice("Terminal binaries installed successfully.");
+              new Notice("Console binaries installed successfully.");
             } catch (err: unknown) {
               const msg = err instanceof Error ? err.message : String(err);
               new Notice(`Failed to download binaries: ${msg}`);
@@ -301,7 +301,7 @@ export class TerminalSettingTab extends PluginSettingTab {
           .setDisabled(status !== "ready")
           .onClick(() => {
             bm.remove();
-            new Notice("Terminal binaries removed.");
+            new Notice("Console binaries removed.");
             this.display();
           });
       });
@@ -626,7 +626,7 @@ export class TerminalSettingTab extends PluginSettingTab {
           const count = this.plugin.themeRegistry.getNames().length;
           const errors = this.plugin.themeRegistry.getUserLoadErrors();
           if (errors.length === 0) {
-            new Notice(`Lean Hermes Obsidian Plugin: Themes reloaded (${count} total).`);
+            new Notice(`Hermes Console for Obsidian Plan: Themes reloaded (${count} total).`);
           }
           // If there were errors, the registry's load() already showed its own Notice.
         });
@@ -729,7 +729,7 @@ export class TerminalSettingTab extends PluginSettingTab {
     new Setting(containerEl)
       .setName("Recent sessions to keep")
       .setDesc(
-        "When a tab is closed, its terminal scrollback is kept for rescue via \"Restore terminal or Hermes session\". This is separate from Hermes CLI resume. Set to 0 to disable."
+        "When a tab is closed, its terminal scrollback is kept for rescue via \"Restore console or Hermes session\". This is separate from Hermes CLI resume. Set to 0 to disable."
       )
       .addText((text) =>
         text
@@ -753,7 +753,7 @@ export class TerminalSettingTab extends PluginSettingTab {
     new Setting(containerEl)
       .setName("Enable Hermes session integration")
       .setDesc(
-        "Show live Hermes CLI sessions when you run Obsidian's command palette action \"Restore terminal or Hermes session\". Pick a Hermes session there to open a fresh terminal that runs hermes --resume. No terminal scrollback is replayed and no session note is generated."
+        "Show live Hermes CLI sessions when you run Obsidian's command palette action \"Restore console or Hermes session\". Pick a Hermes session there to open a fresh terminal that runs hermes --resume. No terminal scrollback is replayed and no session note is generated."
       )
       .addToggle((toggle) =>
         toggle.setValue(this.plugin.settings.enableClaudeIntegration).onChange(async (value) => {
@@ -767,7 +767,7 @@ export class TerminalSettingTab extends PluginSettingTab {
       new Setting(containerEl)
         .setName("Hermes sessions to show")
         .setDesc(
-          "Maximum number of recent Hermes CLI sessions to include when the user opens the Obsidian command palette and runs \"Restore terminal or Hermes session\". Sessions are read live from hermes sessions list; they are not shown directly in settings."
+          "Maximum number of recent Hermes CLI sessions to include when the user opens the Obsidian command palette and runs \"Restore console or Hermes session\". Sessions are read live from hermes sessions list; they are not shown directly in settings."
         )
         .addText((text) =>
           text

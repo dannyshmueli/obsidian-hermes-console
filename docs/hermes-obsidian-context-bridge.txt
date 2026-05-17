@@ -1,7 +1,7 @@
 Hermes Obsidian context bridge
 ==============================
 
-Lean Hermes Obsidian Plugin (Terminal) writes the current Obsidian attachment state to:
+Hermes Console for Obsidian Plan writes the current Obsidian attachment state to:
 
   <vault>/.obsidian/hermes/context.json
 

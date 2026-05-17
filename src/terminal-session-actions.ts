@@ -25,5 +25,5 @@ export function shouldBlockTerminalViewClose(sessionCount: number, workspaceClos
 }
 
 export function getTerminalViewCloseBlockedMessage(): string {
-  return "Hermes terminal kept open. Close Hermes tabs individually, or use the Close Hermes terminal command.";
+  return "Hermes Console kept open. Close Hermes tabs individually, or use the Close Hermes Console command.";
 }

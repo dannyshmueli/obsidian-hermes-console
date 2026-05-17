@@ -55,44 +55,44 @@ export default class TerminalPlugin extends Plugin {
     });
 
     // Ribbon icon
-    this.ribbonEl = this.addRibbonIcon(this.settings.ribbonIcon, "Open Hermes terminal", () => {
+    this.ribbonEl = this.addRibbonIcon(this.settings.ribbonIcon, "Open Hermes Console", () => {
       void this.activateTerminal();
     });
 
     // Commands
     this.addCommand({
       id: "open-terminal",
-      name: "Open Hermes terminal",
+      name: "Open Hermes Console",
       callback: () => void this.activateTerminal(),
     });
 
     this.addCommand({
       id: "close-terminal",
-      name: "Close Hermes terminal",
+      name: "Close Hermes Console",
       callback: () => this.closeTerminal(),
     });
 
     this.addCommand({
       id: "new-terminal-tab",
-      name: "New Hermes terminal tab",
+      name: "New Hermes Console tab",
       callback: () => this.newTab(),
     });
 
     this.addCommand({
       id: "toggle-terminal",
-      name: "Toggle Hermes terminal",
+      name: "Toggle Hermes Console",
       callback: () => this.toggleTerminal(),
     });
 
     this.addCommand({
       id: "open-terminal-split",
-      name: "Open Hermes terminal in new pane",
+      name: "Open Hermes Console in new pane",
       callback: () => void this.openTerminalInNewPane(),
     });
 
     this.addCommand({
       id: "open-terminal-here",
-      name: "Open Hermes terminal in current file's directory",
+      name: "Open Hermes Console in current file's directory",
       checkCallback: (checking) => {
         if (!this.app.workspace.getActiveFile()) return false;
         if (!checking) void this.openTerminalHere();
@@ -102,7 +102,7 @@ export default class TerminalPlugin extends Plugin {
 
     this.addCommand({
       id: "restore-terminal-or-hermes-session",
-      name: "Restore terminal or Hermes session",
+      name: "Restore console or Hermes session",
       callback: () => void openRestoreSessionPicker(this),
     });
 
@@ -199,7 +199,7 @@ export default class TerminalPlugin extends Plugin {
           : adapter.getBasePath();
         menu.addItem((item) =>
           item
-            .setTitle("Open Hermes terminal here")
+            .setTitle("Open Hermes Console here")
             .setIcon("terminal")
             .onClick(() => void this.openTerminalAt(cwd))
         );
@@ -314,7 +314,7 @@ export default class TerminalPlugin extends Plugin {
       const view = leaves[0].view as TerminalView;
       view.createNewTab();
     } else {
-      // Open terminal first, then it auto-creates a tab
+      // Open console first, then it auto-creates a tab
       void this.activateTerminal();
     }
   }

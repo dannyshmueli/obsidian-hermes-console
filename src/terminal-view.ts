@@ -39,7 +39,7 @@ export class TerminalView extends ItemView {
   }
 
   getDisplayText(): string {
-    return "Hermes Terminal";
+    return "Hermes Console";
   }
 
   getIcon(): string {
@@ -86,8 +86,8 @@ export class TerminalView extends ItemView {
       cls: "terminal-shell-settings-button",
     });
     settingsButton.type = "button";
-    settingsButton.title = "Open Hermes terminal settings";
-    settingsButton.setAttribute("aria-label", "Open Hermes terminal settings");
+    settingsButton.title = "Open Hermes Console settings";
+    settingsButton.setAttribute("aria-label", "Open Hermes Console settings");
     setIcon(settingsButton, HERMES_SETTINGS_ICON_ID);
     settingsButton.addEventListener("click", () => this.openSettingsTab());
 
@@ -167,7 +167,7 @@ export class TerminalView extends ItemView {
       setting?.open?.();
       setting?.openTabById?.(this.plugin.manifest.id);
     } catch (err) {
-      console.error("Terminal: failed to open Hermes terminal settings", err);
+      console.error("Hermes Console: failed to open settings", err);
     }
   }
 

@@ -1,6 +1,6 @@
 # URI Handler
 
-Lean Hermes Obsidian Plugin (Terminal) keeps the compatible `obsidian://lean-terminal` protocol handler, usable from any note link, dashboard button, or external script:
+Hermes Console for Obsidian Plan keeps the compatible `obsidian://lean-terminal` protocol handler, usable from any note link, dashboard button, or external script:
 
 | Parameter | Description | Example |
 |-----------|-------------|---------|

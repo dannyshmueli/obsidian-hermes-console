@@ -1,4 +1,4 @@
-# Lean Hermes Obsidian Plugin (Terminal)
+# Hermes Console for Obsidian Plan
 
 [![Release](https://img.shields.io/github/release/sdkasper/lean-obsidian-terminal?logo=obsidian&logoColor=A991D4&style=flat-square&labelColor=000000&color=25D0F7)](https://github.com/sdkasper/lean-obsidian-terminal/releases)
 [![Obsidian](https://img.shields.io/badge/Obsidian-v1.5.0+-A991D4?style=flat-square&labelColor=000000)](https://obsidian.md)
@@ -9,9 +9,9 @@
 [![License](https://img.shields.io/badge/License-MIT-007BFF?style=flat-square&labelColor=000000)](LICENSE)
 [![Discord](https://img.shields.io/badge/Discord-Join%20Server-5865F2?style=flat-square&labelColor=000000&logo=discord&logoColor=5865F2)](https://discord.gg/sbMg6PP2vq)
 
-A Hermes-first embedded terminal panel for [Obsidian](https://obsidian.md), powered by [xterm.js](https://xtermjs.org/) and [node-pty](https://github.com/nicedoc/node-pty). It opens new tabs directly into `hermes` by default when the Hermes CLI is installed separately and available in Obsidian's PATH, so a Nous/Hermes workflow can stay inside the vault workspace - no external windows needed.
+A Hermes Console panel for [Obsidian](https://obsidian.md), powered by [xterm.js](https://xtermjs.org/) and [node-pty](https://github.com/nicedoc/node-pty). It opens new tabs directly into `hermes` by default when the Hermes CLI is installed separately and available in Obsidian's PATH, so a Nous/Hermes workflow can stay inside the vault workspace - no external windows needed.
 
-This fork preserves the upstream Lean Terminal foundation and project history while adapting the visible product surface for Hermes-in-Obsidian use.
+This fork preserves the upstream Lean Terminal foundation and project history while adapting the visible product surface for Hermes Console for Obsidian Plan use.
 
 **Desktop only.** Requires Obsidian 1.5.0+.
 
@@ -68,27 +68,27 @@ This plugin does not install the Hermes CLI. Install Hermes separately if you wa
 
 ### Community Plugins (published releases)
 
-Use this path when the Hermes-facing plugin is available in Obsidian's Community Plugins directory.
+Use this path when the Hermes Console plugin is available in Obsidian's Community Plugins directory.
 
 1. Open **Settings > Community Plugins**
-2. Search for "Lean Hermes Obsidian Plugin (Terminal)"
+2. Search for "Hermes Console for Obsidian Plan"
 3. Click **Install**
 4. Enable the plugin in **Settings > Community Plugins**
-5. Go to **Settings > Lean Hermes Obsidian Plugin (Terminal) > Download binaries** and click **Download** to fetch the native `node-pty` binary for your platform
-6. Open the terminal via the ribbon icon or command palette
+5. Go to **Settings > Hermes Console for Obsidian Plan > Download binaries** and click **Download** to fetch the native `node-pty` binary for your platform
+6. Open the console via the ribbon icon or command palette
 
 The upstream community plugin remains available as [Lean Terminal](https://community.obsidian.md/plugins/lean-terminal).
 
 ### BRAT beta
 
-Use this path for beta builds or if the Hermes-facing plugin is not yet available in Community Plugins.
+Use this path for beta builds or if the Hermes Console plugin is not yet available in Community Plugins.
 
 1. Install the [BRAT](https://github.com/TfTHacker/obsidian42-brat) plugin if you don't have it
 2. Open **Settings > BRAT > Add Beta Plugin**
 3. Enter: `sdkasper/lean-obsidian-terminal`
 4. Enable the plugin in **Settings > Community Plugins**
-5. Go to **Settings > Lean Hermes Obsidian Plugin (Terminal) > Download binaries** and click **Download** to fetch the native `node-pty` binary for your platform
-6. Open the terminal via the ribbon icon or command palette
+5. Go to **Settings > Hermes Console for Obsidian Plan > Download binaries** and click **Download** to fetch the native `node-pty` binary for your platform
+6. Open the console via the ribbon icon or command palette
 
 ### Manual/local development
 
@@ -108,9 +108,9 @@ Use this path for beta builds or if the Hermes-facing plugin is not yet availabl
 
 ### Troubleshooting
 
-If the terminal fails to open, check the `node-pty` native module first:
+If the console fails to open, check the `node-pty` native module first:
 
-- Community Plugins or BRAT: run **Settings > Lean Hermes Obsidian Plugin (Terminal) > Download binaries** again
+- Community Plugins or BRAT: run **Settings > Hermes Console for Obsidian Plan > Download binaries** again
 - Manual/local development: rerun `npm install`, `npm run build`, and `node install.mjs "/path/to/vault"`
 - Restart Obsidian completely after fixing binaries or native module files
 
@@ -176,7 +176,7 @@ node install.mjs     # Install to default vault (D:\LOS Test)
 
 ## Contributors
 
-This Hermes-facing fork is based on Lean Terminal. Upstream project credit and contributor credit are preserved here:
+This Hermes Console fork is based on Lean Terminal. Upstream project credit and contributor credit are preserved here:
 
 - **[@FarhadGSRX](https://github.com/FarhadGSRX)** - Session persistence, session rescue buffer, original Claude Code session work in upstream Lean Terminal, color scheme catalog with themes.json support
 - **[@ckelsoe](https://github.com/ckelsoe)** - Per-tab color tint customization with editable palette, wiki-link autocomplete with path-insertion modes

@@ -38,9 +38,9 @@ describe("terminal session safety actions", () => {
     expect(shouldBlockTerminalViewClose(0, false)).toBe(false);
   });
 
-  it("explains how to close the whole Hermes terminal intentionally", () => {
+  it("explains how to close the whole Hermes Console intentionally", () => {
     expect(getTerminalViewCloseBlockedMessage()).toBe(
-      "Hermes terminal kept open. Close Hermes tabs individually, or use the Close Hermes terminal command.",
+      "Hermes Console kept open. Close Hermes tabs individually, or use the Close Hermes Console command.",
     );
   });
 });
