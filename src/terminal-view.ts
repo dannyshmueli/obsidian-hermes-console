@@ -4,7 +4,7 @@ import { TerminalTabManager, type TabManagerOptions, type CreateTabOpts } from "
 import { pushRecentSession } from "./recent-sessions";
 import type TerminalPlugin from "./main";
 import type { SavedViewState } from "./session-state";
-import { HERMES_MARK_ICON_ID } from "./hermes-icon";
+import { HERMES_MARK_ICON_ID, HERMES_SETTINGS_ICON_ID } from "./hermes-icon";
 import {
   getTerminalViewCloseBlockedMessage,
   shouldBlockTerminalViewClose,
@@ -88,7 +88,7 @@ export class TerminalView extends ItemView {
     settingsButton.type = "button";
     settingsButton.title = "Open Hermes terminal settings";
     settingsButton.setAttribute("aria-label", "Open Hermes terminal settings");
-    setIcon(settingsButton, "sliders-horizontal");
+    setIcon(settingsButton, HERMES_SETTINGS_ICON_ID);
     settingsButton.addEventListener("click", () => this.openSettingsTab());
 
     const shellBodyEl = shellEl.createDiv({ cls: "terminal-shell-body" });

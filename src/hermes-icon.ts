@@ -1,5 +1,6 @@
 export const HERMES_ICON_ID = "hermes-caduceus-wing";
 export const HERMES_MARK_ICON_ID = "hermes-caduceus-mark";
+export const HERMES_SETTINGS_ICON_ID = "hermes-settings-sliders";
 
 /**
  * Image-gen based Hermes wings.
@@ -16,3 +17,16 @@ export const HERMES_ICON_SVG = `
  * Header mark: same generated wing shape, just shown bigger in the plugin chrome.
  */
 export const HERMES_MARK_ICON_SVG = HERMES_ICON_SVG;
+
+/**
+ * Settings icon: custom oversized sliders.
+ * Lucide sliders look tiny because most of the 24px box is empty. This uses the
+ * full box so it remains legible in the header button.
+ */
+export const HERMES_SETTINGS_ICON_SVG = `
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg">
+  <path d="M4 7h16" />
+  <path d="M4 17h16" />
+  <path d="M8.5 4.5v5" />
+  <path d="M15.5 14.5v5" />
+</svg>`;
