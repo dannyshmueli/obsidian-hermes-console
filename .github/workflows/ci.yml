@@ -24,3 +24,5 @@ jobs:
       - run: npm run build
 
       - run: npm test
+
+      - run: python3 -m unittest discover -s tests -p 'test_*.py' -v

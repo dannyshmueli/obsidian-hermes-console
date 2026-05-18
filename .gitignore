@@ -8,3 +8,5 @@ data.json
 shell-integration/
 .superpowers/
 .worktrees/
+.hermes/
+.planning/

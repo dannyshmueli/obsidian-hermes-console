@@ -164,7 +164,7 @@ def _format_context(payload):
         ]
         selected = context.get("selectedText", "")
         if len(selected) <= INLINE_SELECTION_LIMIT:
-            return "\n".join([*common, "selected_text:", "```markdown", selected, "```", "</obsidian_context>"])
+            return "\n".join([*common, f"selected_text_json: {_safe_json_for_system_injection(selected)}", "</obsidian_context>"])
         return "\n".join([
             *common,
             f"selected_text_preview: {_clip_text(selected, LARGE_SELECTION_PREVIEW_LIMIT)}",
@@ -205,6 +205,10 @@ def _payload_freshness_key(payload, updated):
 
 def _format_range(range_):
     return f"{range_['from']['line'] + 1}:{range_['from']['column']}-{range_['to']['line'] + 1}:{range_['to']['column']}"
+
+
+def _safe_json_for_system_injection(value):
+    return json.dumps(value).replace("<", "\\u003c").replace(">", "\\u003e")
 
 
 def _clip_text(text, limit):
