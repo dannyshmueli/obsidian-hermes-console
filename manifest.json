@@ -1,7 +1,7 @@
 {
   "id": "hermes-console",
   "name": "Hermes Console",
-  "version": "1.1.4",
+  "version": "1.1.5",
   "minAppVersion": "1.7.2",
   "description": "Run Hermes Agent in an embedded console with native PTY tabs and selected-note context.",
   "author": "Danny Shmueli",
