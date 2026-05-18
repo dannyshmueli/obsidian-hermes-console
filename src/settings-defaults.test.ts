@@ -21,8 +21,12 @@ describe("DEFAULT_SETTINGS", () => {
     expect(DEFAULT_SETTINGS.claudeSessionsMax).toBeGreaterThan(0);
   });
 
-  it("defaults Obsidian context sharing off until the user enables it", () => {
-    expect(DEFAULT_SETTINGS.sendObsidianContextToHermes).toBe(false);
+  it("opens new terminals in the right sidebar by default", () => {
+    expect(DEFAULT_SETTINGS.defaultLocation).toBe("right");
+  });
+
+  it("defaults Obsidian context sharing on for Hermes turns", () => {
+    expect(DEFAULT_SETTINGS.sendObsidianContextToHermes).toBe(true);
   });
 
   it("notifies on background Hermes completion by default", () => {
