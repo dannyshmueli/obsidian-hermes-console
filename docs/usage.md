@@ -5,7 +5,7 @@
 | Open console | Click the Hermes Console icon in the ribbon, or run **Open Hermes Console** from the command palette. New installs open in the right sidebar by default |
 | Toggle console | Command palette: **Toggle Hermes Console**, or click the ribbon icon again |
 | New tab | Command palette: **New Hermes Console tab**, or click the **+** button in the tab bar. Fresh tabs run `hermes` by default |
-| Rename tab | Click the pencil icon on the tab, or right-click the tab label |
+| Rename or color tab | Click the pencil/edit icon on the tab. The inline editor lets you rename the tab and pick a color swatch |
 | Pin tab | Right-click the tab - **Pin** - hides the close button and blocks accidental close |
 | Reorder tabs | Drag a tab left or right when two or more tabs are open |
 | Drop file path | Drag a file from the file explorer or Windows Explorer into the terminal |
