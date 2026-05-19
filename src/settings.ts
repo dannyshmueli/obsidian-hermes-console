@@ -208,6 +208,13 @@ export class TerminalSettingTab extends PluginSettingTab {
     row.addSlider((slider) => {
       slider.sliderEl.addClass("hermes-tab-color-tint-slider");
       slider.sliderEl.setAttribute("aria-label", `Tint strength for ${color.name}`);
+      const tintWrapper = slider.sliderEl.parentElement;
+      if (tintWrapper) {
+        tintWrapper.addClass("hermes-tab-color-tint-control");
+        const label = tintWrapper.createSpan({ cls: "hermes-tab-color-tint-label", text: "Tint" });
+        label.setAttribute("aria-hidden", "true");
+        tintWrapper.prepend(label);
+      }
       slider
         .setLimits(0, MAX_TINT_STRENGTH, 1)
         .setValue(color.tintStrength)
