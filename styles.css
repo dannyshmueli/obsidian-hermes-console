@@ -953,6 +953,27 @@ body.theme-light .terminal-view-container {
 }
 
 /* Settings palette swatch chip */
+.hermes-tab-color-setting .setting-item-control {
+  gap: 10px;
+}
+
+.hermes-tab-color-setting .hermes-tab-color-tint-slider {
+  position: relative;
+  margin-left: 38px;
+}
+
+.hermes-tab-color-setting .hermes-tab-color-tint-slider::before {
+  content: "Tint";
+  position: absolute;
+  left: -38px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 11px;
+  line-height: 1;
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
 .lean-color-swatch {
   display: inline-block;
   width: 14px;

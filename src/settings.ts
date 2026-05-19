@@ -169,6 +169,7 @@ export class TerminalSettingTab extends PluginSettingTab {
 
   private renderTabColorRow(container: HTMLElement, color: TabColorDef): void {
     const row = new Setting(container);
+    row.settingEl.addClass("hermes-tab-color-setting");
 
     const swatch = row.nameEl.createSpan({ cls: "lean-color-swatch" });
     swatch.style.background = color.value;
@@ -204,7 +205,9 @@ export class TerminalSettingTab extends PluginSettingTab {
       );
     }
 
-    row.addSlider((slider) =>
+    row.addSlider((slider) => {
+      slider.sliderEl.addClass("hermes-tab-color-tint-slider");
+      slider.sliderEl.setAttribute("aria-label", `Tint strength for ${color.name}`);
       slider
         .setLimits(0, MAX_TINT_STRENGTH, 1)
         .setValue(color.tintStrength)
@@ -213,8 +216,8 @@ export class TerminalSettingTab extends PluginSettingTab {
           color.tintStrength = value;
           await this.plugin.saveSettings();
           this.plugin.updateTerminalBackgrounds();
-        }),
-    );
+        });
+    });
 
     if (color.builtin) {
       row.addButton((btn) =>
