@@ -7,6 +7,7 @@ import {
   ObsidianContextBridgeConsumer,
   ObsidianContextTracker,
   buildObsidianContextBridgePayload,
+  describeObsidianContextHeaderDetails,
   describeObsidianContextForHeader,
   formatObsidianContextForHermesTurn,
   readObsidianContextBridgePayloadSync,
@@ -682,5 +683,71 @@ describe("describeObsidianContextForHeader", () => {
     }))).toBe("No Markdown context");
     expect(describeObsidianContextForHeader(true, selectionPayload)).toBe("SEL 2L Header.md:1-2");
     expect(describeObsidianContextForHeader(true, cursorPayload)).toBe("CUR Cursor.md:1");
+  });
+});
+
+describe("describeObsidianContextHeaderDetails", () => {
+  it("splits selection header details into file and context rows", () => {
+    const payload = buildObsidianContextBridgePayload({
+      app: makeApp({
+        file: mdFile("Projects/Header.md"),
+        editor: makeEditor(["one", "two"], {
+          selection: "one\ntwo",
+          from: { line: 0, ch: 0 },
+          to: { line: 1, ch: 3 },
+        }),
+      }),
+      tracker: new ObsidianContextTracker(),
+      submitSequence: 23,
+      terminalId: "terminal-1",
+      terminalTitle: "Hermes",
+      now: new Date("2026-05-16T12:00:00.000Z"),
+    });
+
+    expect(describeObsidianContextHeaderDetails(true, payload)).toEqual({
+      file: "Header.md",
+      context: "selected lines 1-2 (2L)",
+    });
+  });
+
+  it("splits cursor header details into file and context rows", () => {
+    const payload = buildObsidianContextBridgePayload({
+      app: makeApp({
+        file: mdFile("Cursor.md"),
+        editor: makeEditor(["one", "two", "three", "four", "cursor"], { cursor: { line: 4, ch: 0 } }),
+      }),
+      tracker: new ObsidianContextTracker(),
+      submitSequence: 24,
+      terminalId: "terminal-1",
+      terminalTitle: "Hermes",
+      now: new Date("2026-05-16T12:00:00.000Z"),
+    });
+
+    expect(describeObsidianContextHeaderDetails(true, payload)).toEqual({
+      file: "Cursor.md",
+      context: "cursor line 5",
+    });
+  });
+
+  it("keeps disabled and empty states readable in the two-row header", () => {
+    expect(describeObsidianContextHeaderDetails(false, null)).toEqual({
+      file: "OFF",
+      context: "note context disabled",
+    });
+    expect(describeObsidianContextHeaderDetails(true, null)).toEqual({
+      file: "No active terminal",
+      context: "open a terminal tab",
+    });
+    expect(describeObsidianContextHeaderDetails(true, buildObsidianContextBridgePayload({
+      app: makeApp(null),
+      tracker: new ObsidianContextTracker(),
+      submitSequence: 25,
+      terminalId: "terminal-1",
+      terminalTitle: "Hermes",
+      now: new Date("2026-05-16T12:00:00.000Z"),
+    }))).toEqual({
+      file: "No Markdown context",
+      context: "focus an Obsidian note",
+    });
   });
 });

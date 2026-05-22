@@ -22,7 +22,7 @@ import {
 import {
   ObsidianContextTracker,
   buildObsidianContextBridgePayload,
-  describeObsidianContextForHeader,
+  describeObsidianContextHeaderDetails,
   resolveObsidianContextBridgePath,
   writeObsidianContextBridgePayloadSync,
   type ObsidianContextBridgePayload,
@@ -471,13 +471,19 @@ export class TerminalTabManager {
     });
 
     const previewPayload = this.buildObsidianContextPreviewPayload();
-    this.contextHeaderEl.createSpan({
-      cls: "terminal-context-status",
-      text: describeObsidianContextForHeader(
-        enabled,
-        previewPayload,
-      ),
+    const details = describeObsidianContextHeaderDetails(enabled, previewPayload);
+    const detailsEl = this.contextHeaderEl.createDiv({
+      cls: "terminal-context-details",
+      attr: {
+        "aria-label": `Obsidian context: file ${details.file}, scope ${details.context}`,
+      },
     });
+    const fileRow = detailsEl.createDiv({ cls: "terminal-context-row" });
+    fileRow.createSpan({ cls: "terminal-context-row-label", text: "file:" });
+    fileRow.createSpan({ cls: "terminal-context-row-value", text: details.file });
+    const contextRow = detailsEl.createDiv({ cls: "terminal-context-row" });
+    contextRow.createSpan({ cls: "terminal-context-row-label", text: "scope:" });
+    contextRow.createSpan({ cls: "terminal-context-row-value", text: details.context });
   }
 
   /**

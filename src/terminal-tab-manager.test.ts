@@ -25,15 +25,22 @@ class FakeElement {
     this.children = [];
   }
 
-  createEl(_tag: string, opts?: { cls?: string; text?: string }): FakeElement {
+  createEl(_tag: string, opts?: { cls?: string; text?: string; attr?: Record<string, string> }): FakeElement {
     const child = new FakeElement(opts?.cls);
     child.text = opts?.text ?? "";
+    for (const [name, value] of Object.entries(opts?.attr ?? {})) {
+      child.setAttribute(name, value);
+    }
     this.children.push(child);
     return child;
   }
 
-  createSpan(opts?: { cls?: string; text?: string }): FakeElement {
+  createSpan(opts?: { cls?: string; text?: string; attr?: Record<string, string> }): FakeElement {
     return this.createEl("span", opts);
+  }
+
+  createDiv(opts?: { cls?: string; text?: string; attr?: Record<string, string> }): FakeElement {
+    return this.createEl("div", opts);
   }
 
   setAttribute(name: string, value: string): void {
@@ -70,6 +77,15 @@ function getRenderedToggle(header: FakeElement): FakeElement {
   const toggle = header.children.find((child) => child.hasClass("terminal-context-toggle"));
   if (!toggle) throw new Error("context toggle was not rendered");
   return toggle;
+}
+
+function findRenderedChild(root: FakeElement, className: string): FakeElement | undefined {
+  if (root.hasClass(className)) return root;
+  for (const child of root.children) {
+    const found = findRenderedChild(child, className);
+    if (found) return found;
+  }
+  return undefined;
 }
 
 describe("getContextHeaderDestinationLabel", () => {
@@ -206,5 +222,49 @@ describe("context header toggle state", () => {
     } finally {
       globalThis.window = originalWindow;
     }
+  });
+
+  it("renders Obsidian context details as labeled file and context rows after the toggle", () => {
+    const header = new FakeElement();
+    const manager = Object.create(TerminalTabManager.prototype) as {
+      contextHeaderEl: FakeElement;
+      getActiveSession: () => { id: string; name: string };
+      isActiveNoteContextEnabled: () => boolean;
+      buildObsidianContextPreviewPayload: () => unknown;
+      toggleActiveNoteContextEnabled: () => boolean;
+      renderContextHeader: () => void;
+    };
+
+    manager.contextHeaderEl = header;
+    manager.getActiveSession = () => ({ id: "terminal-a", name: "Hermes A" });
+    manager.isActiveNoteContextEnabled = () => true;
+    manager.buildObsidianContextPreviewPayload = () => ({
+      attach: { enabled: true },
+      context: {
+        type: "selection",
+        file: { name: "Header.md" },
+        range: { from: { line: 0 }, to: { line: 1 } },
+        lineCount: 2,
+      },
+    });
+    manager.toggleActiveNoteContextEnabled = () => true;
+
+    manager.renderContextHeader();
+
+    expect(header.children[0]?.hasClass("terminal-context-toggle")).toBe(true);
+    const details = header.children[1];
+    expect(details?.hasClass("terminal-context-details")).toBe(true);
+    expect(details?.getAttribute("aria-label")).toBe("Obsidian context: file Header.md, scope selected lines 1-2 (2L)");
+
+    const rows = details?.children ?? [];
+    expect(rows).toHaveLength(2);
+    expect(rows[0].hasClass("terminal-context-row")).toBe(true);
+    expect(rows[0].children[0].text).toBe("file:");
+    expect(rows[0].children[0].hasClass("terminal-context-row-label")).toBe(true);
+    expect(rows[0].children[1].text).toBe("Header.md");
+    expect(rows[0].children[1].hasClass("terminal-context-row-value")).toBe(true);
+    expect(rows[1].children[0].text).toBe("scope:");
+    expect(rows[1].children[1].text).toBe("selected lines 1-2 (2L)");
+    expect(findRenderedChild(header, "terminal-context-status")).toBeUndefined();
   });
 });

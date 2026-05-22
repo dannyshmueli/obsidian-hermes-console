@@ -293,6 +293,33 @@ export function formatObsidianContextForHermesTurn(
   ].join("\n");
 }
 
+export type ObsidianContextHeaderDetails = {
+  file: string;
+  context: string;
+};
+
+export function describeObsidianContextHeaderDetails(
+  enabled: boolean,
+  payload: ObsidianContextBridgePayload | null,
+): ObsidianContextHeaderDetails {
+  if (!enabled) return { file: "OFF", context: "note context disabled" };
+  if (!payload) return { file: "No active terminal", context: "open a terminal tab" };
+  if (!payload.attach.enabled) return { file: "OFF", context: "note context disabled" };
+  if (!payload.context) return { file: "No Markdown context", context: "focus an Obsidian note" };
+  if (payload.context.type === "selection") {
+    const fromLine = payload.context.range.from.line + 1;
+    const toLine = payload.context.range.to.line + 1;
+    return {
+      file: payload.context.file.name,
+      context: `selected lines ${fromLine}-${toLine} (${payload.context.lineCount}L)`,
+    };
+  }
+  return {
+    file: payload.context.file.name,
+    context: `cursor line ${payload.context.cursor.line + 1}`,
+  };
+}
+
 export function describeObsidianContextForHeader(
   enabled: boolean,
   payload: ObsidianContextBridgePayload | null,

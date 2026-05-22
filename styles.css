@@ -448,6 +448,45 @@ body.theme-light .terminal-view-container {
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--hermes-accent) 18%, transparent);
 }
 
+.terminal-context-details {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1 1 auto;
+  color: var(--text-muted);
+  font-family: var(--font-monospace);
+  font-size: 11px;
+  line-height: 1.25;
+}
+
+.terminal-context-row {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+}
+
+.terminal-context-row-label {
+  flex: 0 0 auto;
+  color: color-mix(in srgb, var(--text-muted) 72%, transparent);
+  font-weight: 650;
+  letter-spacing: 0.03em;
+  text-transform: lowercase;
+}
+
+.terminal-context-row-value {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-normal);
+}
+
+.terminal-context-row + .terminal-context-row .terminal-context-row-value {
+  color: var(--text-muted);
+}
+
 .terminal-context-status {
   color: var(--text-muted);
   overflow: hidden;
