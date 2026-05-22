@@ -4,6 +4,14 @@ All notable changes to Hermes Console are documented here.
 
 ## Unreleased
 
+## 1.1.15 - May 23, 2026
+
+### Improvements
+
+- Polish the Hermes Console header with a generated feathered Hermes wing logo, compact brand spacing, and a subtle Console for Obsidian subtitle.
+- Remove the unclear tiny Obsidian diamond mark from the header subtitle.
+- Embed the generated wing artwork in CSS so the logo renders reliably in Obsidian without relying on relative asset loading.
+
 ### Improvements
 
 - Document note context sharing as opt-in per Hermes Console terminal tab: use the **Send context to Hermes** header toggle, or bind **Toggle note context for active Hermes Console tab** from the command palette; the per-tab toggle defaults off after plugin reload or Obsidian restart.

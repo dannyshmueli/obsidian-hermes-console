@@ -33,6 +33,12 @@ for (const file of files) {
   console.log(`  Copied ${file}`);
 }
 
+const assetDir = join(srcDir, "assets");
+if (existsSync(assetDir)) {
+  cpSync(assetDir, join(pluginDir, "assets"), { recursive: true });
+  console.log("  Copied assets");
+}
+
 // Copy Hermes plugin files used by the context bridge.
 const hermesPluginDir = join(srcDir, "hermes");
 const hermesFiles = ["obsidian_context_bridge.js", "plugin.yaml"];

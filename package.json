@@ -21,7 +21,7 @@
     "@xterm/xterm": "^5.5.0"
   },
   "name": "obsidian-hermes-console",
-  "version": "1.1.14",
+  "version": "1.1.15",
   "description": "Use Hermes Agent with selected-note context",
   "main": "main.js",
   "keywords": [

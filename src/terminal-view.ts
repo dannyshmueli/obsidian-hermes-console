@@ -4,7 +4,7 @@ import { TerminalTabManager, type TabManagerOptions, type CreateTabOpts } from "
 import { pushRecentSession } from "./recent-sessions";
 import type TerminalPlugin from "./main";
 import type { SavedViewState } from "./session-state";
-import { HERMES_MARK_ICON_ID, HERMES_SETTINGS_ICON_ID } from "./hermes-icon";
+import { HERMES_SETTINGS_ICON_ID } from "./hermes-icon";
 import {
   getTerminalViewCloseBlockedMessage,
   shouldBlockTerminalViewClose,
@@ -63,9 +63,14 @@ export class TerminalView extends ItemView {
     const shellHeaderEl = shellEl.createDiv({ cls: "terminal-shell-header" });
 
     const brandEl = shellHeaderEl.createDiv({ cls: "terminal-shell-brand" });
-    const brandIconEl = brandEl.createSpan({ cls: "terminal-shell-brand-icon" });
-    setIcon(brandIconEl, HERMES_MARK_ICON_ID);
-    brandEl.createSpan({ cls: "terminal-shell-wordmark", text: "HERMES" });
+    const brandIconEl = brandEl.createSpan({
+      cls: "terminal-shell-brand-icon",
+      attr: { "aria-hidden": "true" },
+    });
+    const brandTextEl = brandEl.createDiv({ cls: "terminal-shell-brand-text" });
+    brandTextEl.createSpan({ cls: "terminal-shell-wordmark", text: "HERMES" });
+    const brandSubtitleEl = brandTextEl.createSpan({ cls: "terminal-shell-subtitle" });
+    brandSubtitleEl.createSpan({ cls: "terminal-shell-subtitle-text", text: "Console for Obsidian" });
 
     shellHeaderEl.createDiv({ cls: "terminal-shell-divider" });
 

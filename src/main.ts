@@ -19,8 +19,6 @@ import { getLeafForTerminalLocation } from "./terminal-opener";
 import {
   HERMES_ICON_ID,
   HERMES_ICON_SVG,
-  HERMES_MARK_ICON_ID,
-  HERMES_MARK_ICON_SVG,
   HERMES_SETTINGS_ICON_ID,
   HERMES_SETTINGS_ICON_SVG,
 } from "./hermes-icon";
@@ -36,7 +34,6 @@ export default class TerminalPlugin extends Plugin {
 
   async onload(): Promise<void> {
     addIcon(HERMES_ICON_ID, HERMES_ICON_SVG);
-    addIcon(HERMES_MARK_ICON_ID, HERMES_MARK_ICON_SVG);
     addIcon(HERMES_SETTINGS_ICON_ID, HERMES_SETTINGS_ICON_SVG);
     await this.loadSettings();
     this.obsidianContextTracker = new ObsidianContextTracker();
