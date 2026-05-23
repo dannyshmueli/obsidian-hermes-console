@@ -910,6 +910,20 @@ body.theme-light .terminal-view-container {
   background: transparent;
 }
 
+
+.hermes-github-star-button {
+  color: var(--text-muted);
+}
+
+.hermes-github-star-button:hover {
+  color: var(--text-normal);
+}
+
+.hermes-github-star-button svg {
+  width: 18px;
+  height: 18px;
+}
+
 /* Icon setting preview */
 .lean-terminal-icon-preview {
   display: inline-flex;

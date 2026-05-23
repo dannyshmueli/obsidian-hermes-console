@@ -313,8 +313,19 @@ export class TerminalSettingTab extends PluginSettingTab {
   private renderBinarySection(containerEl: HTMLElement): void {
     new Setting(containerEl).setName("Basic setup").setHeading();
 
-    new Setting(containerEl)
-      .setName(`Hermes Console v${this.plugin.manifest.version}`);
+    const versionSetting = new Setting(containerEl)
+      .setName(`Hermes Console v${this.plugin.manifest.version}`)
+      .setDesc("If Hermes Console saves you time, star it on GitHub.");
+
+    versionSetting.addExtraButton((btn) => {
+      btn
+        .setIcon("github")
+        .setTooltip("Star Hermes Console on GitHub")
+        .onClick(() => {
+          window.open("https://github.com/dannyshmueli/obsidian-hermes-console", "_blank");
+        });
+      btn.extraSettingsEl.addClass("hermes-github-star-button");
+    });
 
     const bm = this.plugin.binaryManager;
     const { platform, arch } = bm.getPlatformInfo();
