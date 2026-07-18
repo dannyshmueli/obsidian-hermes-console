@@ -2,13 +2,13 @@
  * Installs the plugin into an Obsidian vault's .obsidian/plugins directory.
  *
  * Usage: node install.mjs [vault-path]
- * Default vault: D:\LOS Test
+ * Default vault: /Users/devtehen/Documents/Obsidian Vault
  */
 
 import { chmodSync, cpSync, mkdirSync, existsSync } from "fs";
 import { resolve, join } from "path";
 
-const vaultPath = process.argv[2] || "D:\\LOS Test";
+const vaultPath = process.argv[2] || "/Users/devtehen/Documents/Obsidian Vault";
 const pluginDir = join(vaultPath, ".obsidian", "plugins", "hermes-console");
 
 if (!existsSync(join(vaultPath, ".obsidian"))) {
@@ -62,14 +62,14 @@ if (existsSync(nodePtySrc)) {
   mkdirSync(join(nodePtyDest, "lib"), { recursive: true });
   cpSync(join(nodePtySrc, "lib"), join(nodePtyDest, "lib"), { recursive: true });
 
-  // Apply patch right away — if prebuilds copy fails below, the patch is still in place
+  // Apply patch right away -- if prebuilds copy fails below, the patch is still in place
   const patchSrc = join(srcDir, "patches", "windowsConoutConnection.js");
   if (existsSync(patchSrc)) {
     cpSync(patchSrc, join(nodePtyDest, "lib", "windowsConoutConnection.js"));
     console.log("  Applied ConoutConnection patch (no Worker threads)");
   }
 
-  // Prebuilds, package.json, third_party — may be locked if Obsidian has terminal open
+  // Prebuilds, package.json, third_party -- may be locked if Obsidian has terminal open
   let binaryWarning = false;
   try {
     cpSync(join(nodePtySrc, "prebuilds"), join(nodePtyDest, "prebuilds"), { recursive: true });
@@ -93,7 +93,7 @@ if (existsSync(nodePtySrc)) {
   }
 
   if (binaryWarning) {
-    console.log("  Copied node-pty lib + patch (binaries locked by Obsidian — existing binaries unchanged)");
+    console.log("  Copied node-pty lib + patch (binaries locked by Obsidian -- existing binaries unchanged)");
   } else {
     console.log("  Copied node-pty (prebuilt N-API binaries)");
   }
