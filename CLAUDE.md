@@ -14,7 +14,8 @@ Obsidian desktop plugin providing an embedded PTY terminal panel using xterm.js 
 npm install         # Install dependencies
 npm run dev         # Watch mode (auto-rebuild on changes)
 npm run build       # Production build (minified, type-checked)
-node install.mjs    # Copy plugin to D:\LOS Test vault
+node install.mjs "/path/to/vault"  # Copy plugin to an Obsidian vault
+# Or: HERMES_CONSOLE_VAULT="/path/to/vault" node install.mjs
 ```
 
 ## Architecture

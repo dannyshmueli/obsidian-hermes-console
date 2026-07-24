@@ -265,7 +265,8 @@ If you want to support my work, you can use this link to [buy me a drink](https:
 npm install
 npm run dev          # Watch mode (auto-rebuild on save)
 npm run build        # Production build
-node install.mjs     # Install to default vault (D:\LOS Test)
+node install.mjs "/path/to/vault"
+# Or: HERMES_CONSOLE_VAULT="/path/to/vault" node install.mjs
 ```
 
 ## Credits
