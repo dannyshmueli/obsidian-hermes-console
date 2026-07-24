@@ -1,14 +1,22 @@
 /**
  * Installs the plugin into an Obsidian vault's .obsidian/plugins directory.
  *
- * Usage: node install.mjs [vault-path]
- * Default vault: D:\LOS Test
+ * Usage: node install.mjs <vault-path>
+ * Alternatively, set HERMES_CONSOLE_VAULT.
  */
 
 import { chmodSync, cpSync, mkdirSync, existsSync } from "fs";
 import { resolve, join } from "path";
 
-const vaultPath = process.argv[2] || "D:\\LOS Test";
+const vaultPath = process.argv[2]?.trim() || process.env.HERMES_CONSOLE_VAULT?.trim();
+
+if (!vaultPath) {
+  console.error("Error: an Obsidian vault path is required.");
+  console.error("Usage: node install.mjs <vault-path>");
+  console.error("Alternatively, set HERMES_CONSOLE_VAULT to the vault path.");
+  process.exit(1);
+}
+
 const pluginDir = join(vaultPath, ".obsidian", "plugins", "hermes-console");
 
 if (!existsSync(join(vaultPath, ".obsidian"))) {
