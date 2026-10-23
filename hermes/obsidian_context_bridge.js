@@ -129,6 +129,13 @@ function formatObsidianContextForHermesTurn(payload) {
       `hash: ${context.hash}`,
     ];
 
+    if (context.pdf && typeof context.pdf === "object") {
+      const total = context.pdf.totalPages;
+      common.push(
+        `pdf_pages: ${context.pdf.pageFrom}-${context.pdf.pageTo}` + (total ? ` of ${total}` : ""),
+      );
+    }
+
     if (context.selectedText.length <= INLINE_SELECTION_LIMIT) {
       return [
         ...common,

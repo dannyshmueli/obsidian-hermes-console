@@ -50,6 +50,12 @@ def register(ctx):
         emoji="🪽",
     )
 
+    # ``@pdf:`` — pull PDF pages out of the vault on demand (the selection bridge
+    # can only ever carry a few hundred characters; see obsidian_pdf_reference).
+    from .hermes.obsidian_pdf_reference import register_pdf_reference
+
+    register_pdf_reference(ctx)
+
 
 def _pre_llm_call(**kwargs):
     _status_pre_llm_call(**kwargs)
@@ -162,6 +168,15 @@ def _format_context(payload):
             f"char_count: {context['charCount']}",
             f"hash: {context['hash']}",
         ]
+        # PDF selections (Obsidian's pdf.js viewer) carry page numbers; the
+        # Markdown path has none, so this line only appears for PDFs.
+        if isinstance(context.get("pdf"), dict):
+            pdf = context["pdf"]
+            total = pdf.get("totalPages")
+            common.append(
+                f"pdf_pages: {pdf.get('pageFrom')}-{pdf.get('pageTo')}"
+                + (f" of {total}" if total else "")
+            )
         selected = context.get("selectedText", "")
         if len(selected) <= INLINE_SELECTION_LIMIT:
             return "\n".join([*common, f"selected_text_json: {_safe_json_for_system_injection(selected)}", "</obsidian_context>"])

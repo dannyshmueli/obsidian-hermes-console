@@ -10,3 +10,7 @@ shell-integration/
 .worktrees/
 .hermes/
 .planning/
+
+# Python bytecode from Hermes importing this plugin
+__pycache__/
+*.pyc

@@ -19,15 +19,17 @@ Launch Hermes from your vault, opt in per terminal tab to share selected note te
   
 </p>
 
-Highlight a paragraph in Obsidian, enable the **Send context to Hermes** header toggle for that terminal tab, press Enter in Hermes Console, and ask Hermes to rewrite, sharpen, research, or challenge that exact text. Selection in Obsidian becomes context in Hermes only for tabs where note context sharing is enabled.
+Highlight a paragraph in a note or select text in a PDF, enable the **Send context to Hermes** header toggle for that terminal tab, press Enter in Hermes Console, and ask Hermes to rewrite, sharpen, research, or challenge that exact text. A selection in Obsidian - in a note or in a PDF - becomes context in Hermes only for tabs where note context sharing is enabled.
 
 Already use Hermes? Install the Hermes-side bridge once:
 
 ```bash
-hermes plugins install dannyshmueli/obsidian-hermes-console --enable
+hermes plugins install dannyshmueli/obsidian-hermes-console#hermes --enable
 ```
 
-Then install Hermes Console from **Settings > Community Plugins**: search for **Hermes Console**, install it, enable it, click **Download binaries**, open the console, turn on the **Send context to Hermes** header toggle for the tab you want to use, and press Enter on your next Hermes prompt. Community Plugins installs the Obsidian plugin only; the command above installs the Hermes plugin that makes selected-note context work. The Hermes-side plugin appears as `obsidian-context-bridge`; that is expected and no extra Obsidian plugin is needed.
+`#hermes` installs the Hermes-side plugin alone (about 60 KB). Installing the repository root works too - `hermes plugins install dannyshmueli/obsidian-hermes-console` - but it pulls the Obsidian plugin sources and the prebuilt binaries along (about 36 MB), and current Hermes builds ask you to confirm the install scanner's warnings for that form (`--force`).
+
+Then install Hermes Console from **Settings > Community Plugins**: search for **Hermes Console**, install it, enable it, click **Download binaries**, open the console, turn on the **Send context to Hermes** header toggle for the tab you want to use, and press Enter on your next Hermes prompt. Community Plugins installs the Obsidian plugin only; the command above installs the Hermes plugin that makes note and PDF selections work. The Hermes-side plugin appears as `obsidian-context-bridge`; that is expected and no extra Obsidian plugin is needed.
 
 Full install instructions: https://github.com/dannyshmueli/obsidian-hermes-console#installation
 
@@ -40,7 +42,7 @@ Hermes Console is built on a fork of Lean Terminal. We preserve upstream credit 
 1. Install the Hermes bridge plugin once:
 
    ```bash
-   hermes plugins install dannyshmueli/obsidian-hermes-console --enable
+   hermes plugins install dannyshmueli/obsidian-hermes-console#hermes --enable
    ```
 
 2. In Obsidian, open **Settings > Community Plugins**.
@@ -48,16 +50,16 @@ Hermes Console is built on a fork of Lean Terminal. We preserve upstream credit 
 4. Enable **Hermes Console**.
 5. Open **Settings > Hermes Console > Download binaries** and click **Download**.
 6. Open Hermes Console from the ribbon icon or command palette.
-7. Highlight text in any note, turn on the **Send context to Hermes** header toggle for the current terminal tab, type a prompt in Hermes Console, and press Enter.
+7. Highlight text in a note or select text in a PDF, turn on the **Send context to Hermes** header toggle for the current terminal tab, type a prompt in Hermes Console, and press Enter. The header shows what will attach - `SEL 2L note.md:1-2` for a note selection, `PDF p.84 (16 words)` for a PDF one.
 <img width="416" height="291" alt="image" src="https://github.com/user-attachments/assets/eeb38e1d-0f1a-4200-b38a-9eaf065e463b" />
 
-Hermes Console does not install Hermes itself, and Community Plugins does not install Hermes plugins. If `hermes` is already available in your shell and `obsidian-context-bridge` is enabled, new console tabs start Hermes automatically. Note context is attached on submit only after you opt in for that terminal tab.
+Hermes Console does not install Hermes itself, and Community Plugins does not install Hermes plugins. If `hermes` is already available in your shell and `obsidian-context-bridge` is enabled, new console tabs start Hermes automatically. Note and PDF selections are attached on submit only after you opt in for that terminal tab; a PDF selection also carries the page it came from.
 
 ### If you are new to Hermes
 
 1. Install Hermes Agent from https://github.com/NousResearch/hermes-agent.
 2. Run `hermes setup` in your normal terminal and confirm `hermes` starts.
-3. Run `hermes plugins install dannyshmueli/obsidian-hermes-console --enable` to install the Hermes-side bridge.
+3. Run `hermes plugins install dannyshmueli/obsidian-hermes-console#hermes --enable` to install the Hermes-side bridge.
 4. Install Hermes Console from **Settings > Community Plugins**.
 5. Open Hermes Console inside Obsidian and start working from your notes.
 
@@ -76,7 +78,7 @@ Hermes Console has three pieces. They are separate on purpose:
    - It is not a plugin, not a background service, not clipboard paste, and not an Obsidian-to-Hermes network connection.
 
 3. **Hermes plugin: `obsidian-context-bridge`**
-   - Repo-provided Hermes-side plugin installed with `hermes plugins install dannyshmueli/obsidian-hermes-console --enable` and loaded by the Hermes process launched inside the terminal.
+   - Repo-provided Hermes-side plugin installed with `hermes plugins install dannyshmueli/obsidian-hermes-console#hermes --enable` and loaded by the Hermes process launched inside the terminal.
    - Appears in Hermes Plugins as `obsidian-context-bridge`; that is correct. It is not a second Obsidian plugin.
    - Reads `OBSIDIAN_CONTEXT_BRIDGE_PATH` or an explicit bridge path.
    - Uses Hermes hooks to inject the current selected-text/cursor context into the active Hermes turn, expose `obsidian_context()` for large selections, and write busy/idle status for the matching terminal tab.
@@ -140,14 +142,17 @@ End-to-end selected-text/cursor behavior requires all three pieces: Obsidian cap
 - Context is captured at submit time, not pasted into the terminal, so multi-line selections do not break prompt entry.
 - The terminal process receives `OBSIDIAN_CONTEXT_BRIDGE_PATH` so the `obsidian-context-bridge` Hermes plugin can read the right vault bridge file
 - Large selections can stay out of the prompt body and be fetched by Hermes through `obsidian_context()`
+- PDF views work the same way: open a PDF in Obsidian's viewer, turn on the toggle for the tab, select text, and press Enter. The header shows the page and the size of the selection in words (`PDF p.84 (16 words)`) and Hermes receives the text with its page number
+- Only the most recent selection is attached, so switching between a note and a PDF attaches whichever you selected last
+- For whole pages instead of a selection, ask Hermes with a `@pdf:` reference in the prompt - `@pdf:paper.pdf:84-86` for a page range, or `@pdf:current:85-90` for the PDF you are reading (needs `pdftotext`/`pdfinfo` from poppler)
 
 ## Installation
 
-Fast path: install Hermes Console from **Settings > Community Plugins**, then click **Settings > Hermes Console > Download binaries**. If you want selected-note/cursor context in Hermes, also install the Hermes-side bridge plugin with `hermes plugins install dannyshmueli/obsidian-hermes-console --enable`.
+Fast path: install Hermes Console from **Settings > Community Plugins**, then click **Settings > Hermes Console > Download binaries**. Note and PDF selections reach Hermes with the Hermes-side bridge plugin: `hermes plugins install dannyshmueli/obsidian-hermes-console#hermes --enable`. `#hermes` installs the Hermes-side plugin alone (about 60 KB); `hermes plugins install dannyshmueli/obsidian-hermes-console` installs the repository root just as well, but drags the Obsidian plugin sources and the prebuilt binaries along (about 36 MB) and needs `--force` on current Hermes builds to accept the install scanner's warnings. PDF selections work with no extra setup; the `@pdf:` prompt references need `pdftotext` and `pdfinfo` from poppler on the PATH of the shell Hermes runs in.
 
 The plugin needs native `node-pty` binaries after install. Community Plugins and BRAT users download them from plugin settings. Manual/local development installs them with `npm install` and copies them into the vault plugin directory with `install.mjs`.
 
-Hermes Console does not install the Hermes CLI or auto-enable Hermes plugins. Install Hermes separately if you want the default `hermes` startup command to work. Install `obsidian-context-bridge` with `hermes plugins install dannyshmueli/obsidian-hermes-console --enable` if you want selected-note/cursor context to reach Hermes.
+Hermes Console does not install the Hermes CLI or auto-enable Hermes plugins. Install Hermes separately if you want the default `hermes` startup command to work. Install `obsidian-context-bridge` with `hermes plugins install dannyshmueli/obsidian-hermes-console#hermes --enable` if you want note/PDF selections and cursor context to reach Hermes.
 
 ### Community Plugins
 
@@ -166,10 +171,10 @@ The upstream community plugin remains available as [Lean Terminal](https://commu
 
 Use this path only for beta builds before they reach Community Plugins.
 
-1. If you want selected-note context in Hermes, install the Hermes-side plugin first:
+1. If you want note/PDF selection context in Hermes, install the Hermes-side plugin first:
 
    ```bash
-   hermes plugins install dannyshmueli/obsidian-hermes-console --enable
+   hermes plugins install dannyshmueli/obsidian-hermes-console#hermes --enable
    ```
 
 2. Install the [BRAT](https://github.com/TfTHacker/obsidian42-brat) plugin if you don't have it
@@ -197,8 +202,10 @@ BRAT installs the Obsidian plugin release assets (`main.js`, `manifest.json`, `s
 - Terminal opens from the ribbon icon or command palette
 - Hermes CLI is installed separately and visible to Obsidian's PATH if you want Hermes autostart
 - A new terminal tab starts `hermes` by default when Hermes is available in PATH
-- If using note context: enable the **Send context to Hermes** header toggle for the current terminal tab; `<vault>/.obsidian/hermes/context.json` is updated when you press Enter in that Hermes terminal
-- If using note context: the Hermes process has the `obsidian-context-bridge` plugin enabled and can receive `OBSIDIAN_CONTEXT_BRIDGE_PATH`
+- If using note or PDF context: enable the **Send context to Hermes** header toggle for the current terminal tab; `<vault>/.obsidian/hermes/context.json` is updated when you press Enter in that Hermes terminal
+- If using note or PDF context: the Hermes process has the `obsidian-context-bridge` plugin enabled and can receive `OBSIDIAN_CONTEXT_BRIDGE_PATH`
+- If using PDF context: open a PDF in Obsidian's viewer, enable the toggle for that tab, select text, and press Enter - the header reads `PDF p.84 (16 words)` and `context.json` carries a `pdf` field with the page numbers
+- If you want `@pdf:` references in a prompt: `pdftotext` and `pdfinfo` (poppler) are on the PATH of the shell Hermes runs in
 
 ### Troubleshooting
 
