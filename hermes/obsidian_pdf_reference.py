@@ -364,6 +364,35 @@ def _current_pdf(vault: Path) -> Path | None:
     return None
 
 
+def vault_relative(pdf: Path, vault: Path) -> str:
+    """Vault-relative POSIX path for prompt text, tolerating a symlinked vault.
+
+    ``resolve_in_vault`` returns a *resolved* path, while the vault root can be a
+    symlink (``~/Documents -> /mnt/data/Documents``, an iCloud or Dropbox folder).
+    ``relative_to`` then raises and the ``@pdf:`` header would leak the user's
+    absolute path into the prompt.
+
+    Args:
+        pdf: PDF path, usually the resolved one from :func:`resolve_in_vault`.
+        vault: vault root as discovered (may contain symlinks).
+
+    Usage:
+        vault_relative(Path('/mnt/data/v/paper.pdf'), Path('/home/u/Documents/v'))
+        # => 'paper.pdf'
+
+    Demo:
+        Both ``vault`` and ``vault.resolve()`` are tried, so a caller that
+        already resolved the root gets the same answer; a path outside the vault
+        falls back to itself instead of raising.
+    """
+    for root in (vault, vault.resolve()):
+        try:
+            return pdf.relative_to(root).as_posix()
+        except ValueError:
+            continue
+    return pdf.as_posix()
+
+
 def build_reference_text(
     pdf: Path,
     vault: Path,
@@ -390,10 +419,7 @@ def build_reference_text(
         For the thesis PDF with (84, 84) the output starts with
         ``# 朱坤.pdf — page 84 of 90`` followed by the page text.
     """
-    try:
-        rel = pdf.relative_to(vault)
-    except ValueError:
-        rel = pdf
+    rel = vault_relative(pdf, vault)
     total = page_count(pdf)
 
     first_page = 1 if first is None else max(1, first)

@@ -71,6 +71,25 @@ class TestHelpers(unittest.TestCase):
             self.assertIsNone(MOD.resolve_in_vault(str(outside), vault))
             self.assertIsNone(MOD.resolve_in_vault("", vault))
 
+    def test_header_is_vault_relative_through_a_symlinked_vault_root(self):
+        """The vault root is often a symlink; the prompt must not get a local path."""
+        with tempfile.TemporaryDirectory() as tmp:
+            real_vault = Path(tmp) / "real"
+            (real_vault / "sub").mkdir(parents=True)
+            (real_vault / "sub" / "paper.pdf").write_bytes(b"%PDF-1.4\n")
+            linked_vault = Path(tmp) / "link"
+            try:
+                linked_vault.symlink_to(real_vault, target_is_directory=True)
+            except (OSError, NotImplementedError):
+                self.skipTest("symlinks unavailable on this filesystem")
+
+            # resolve_in_vault resolves the file but not the root: the production path
+            pdf = MOD.resolve_in_vault("sub/paper.pdf", linked_vault)
+            self.assertIsNotNone(pdf)
+            out = MOD.build_reference_text(pdf, linked_vault, 1, 1)
+            self.assertTrue(out.startswith("@pdf:sub/paper.pdf"), out[:120])
+            self.assertNotIn(str(real_vault), out)
+
     def test_target_grammar(self):
         with tempfile.TemporaryDirectory() as tmp:
             vault = Path(tmp)
@@ -141,6 +160,13 @@ class TestAgainstRealVaultPdf(unittest.TestCase):
         out = MOD.build_reference_text(PDF, VAULT, 84, 84)
         self.assertTrue(out.startswith(f"# {PDF_REL} — pages 84-84 of 90"), out[:120])
         self.assertIn("阻抗控制恒力打磨", out)
+
+    def test_resolved_pdf_still_prints_a_vault_relative_header(self):
+        """Production order: parse_target resolves the file, then we render it."""
+        pdf = MOD.resolve_in_vault(PDF_REL, VAULT)
+        self.assertIsNotNone(pdf)
+        out = MOD.build_reference_text(pdf, VAULT, 84, 84)
+        self.assertTrue(out.startswith(f"# {PDF_REL} — pages 84-84 of 90"), out[:160])
 
     def test_max_pages_cap_is_announced(self):
         out = MOD.build_reference_text(PDF, VAULT, 1, 90, max_pages=3)
