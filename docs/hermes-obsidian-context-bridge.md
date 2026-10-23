@@ -79,6 +79,48 @@ When note context sharing is off for that terminal tab, the marker has:
 
 Hermes consumers must treat that as a fresh detach and clear any previously accepted selected text.
 
+## PDF context
+
+A PDF open in Obsidian renders inside the plugin's bundled pdf.js viewer, which has no CodeMirror editor and keeps its selection in the DOM only. Hermes Console therefore reads that DOM selection (`div.page[data-page-number]` and its `textLayer` spans), maps it onto the page it came from, and snapshots it while it is still live: clicking into the console terminal to press Enter clears the viewer's selection, so a snapshot taken at submit time would always be empty. The snapshot is refreshed on `selectionchange`, `keyup` and `pointerup`.
+
+The snapshot travels through the same `context.json` as a note selection, with one extra field:
+
+```json
+{
+  "context": {
+    "type": "selection",
+    "file": { "path": "papers/study.pdf", "name": "study.pdf" },
+    "selectedText": "3.1 引言 传统工业装配任务…",
+    "lineCount": 1,
+    "charCount": 295,
+    "hash": "458acab50d8b6ce7",
+    "pdf": { "pageFrom": 33, "pageTo": 33, "pageCount": 1, "totalPages": 102 }
+  }
+}
+```
+
+`range` and `lineCount` are still filled from the page's text, so a Hermes-side consumer written before this field existed keeps working; `pdf` is additive, and `totalPages` is `null` when the viewer did not report a page count. The console header shows the same thing as `PDF p.33 (295 chars)`.
+
+When a note selection and a PDF selection are both available, the more recent one wins: the tracker timestamps both and attaches whichever the user selected last.
+
+### Pulling whole pages with `@pdf:`
+
+A selection is a few hundred characters by design. To get pages into the prompt, use the `@pdf:` context reference that the Hermes plugin registers (`@pdf:` completion also lists the vault's PDFs with their page counts, plus `current`):
+
+| Reference | Expands to |
+| --- | --- |
+| `@pdf:paper.pdf` | the whole document, capped |
+| `@pdf:paper.pdf:84` | page 84 |
+| `@pdf:paper.pdf:84-86` | pages 84 to 86 |
+| `@pdf:current` | the PDF the last bridge payload pointed at |
+| `@pdf:current:85-90` | that PDF, pages 85 to 90 |
+
+Expansion reads the text with `pdftotext` (`pdfinfo` supplies the page count) from poppler, which preserves the line structure of the page and is cleaner than the selection path, where pdf.js spans can run together across a header. A scanned PDF with no text layer answers with an explicit message instead of silence. Paths resolve inside the vault, and a reference pointing outside it is refused.
+
+Each reference reads at most 10 pages and 12000 characters by default (`OBSIDIAN_PDF_REF_MAX_PAGES`, `OBSIDIAN_PDF_REF_MAX_CHARS`), and says so in the text when it hits a cap, so Hermes can ask for the next window instead of assuming the document ended.
+
+The vault root comes from `OBSIDIAN_PDF_VAULT_ROOT` when set, otherwise the `vaultPath` in `context.json`, otherwise the bridge file's own location (three levels up). The `@pdf:` header always prints the vault-relative path, including when the vault root is a symlink.
+
 ## Busy/idle status files
 
 For each terminal tab, Hermes Console sets environment variables before spawning the PTY:
@@ -164,5 +206,11 @@ If the tab spinner or background-finished notice does not work:
 3. Confirm the terminal environment contains `OBSIDIAN_HERMES_STATUS_PATH` and `OBSIDIAN_HERMES_TAB_ID`.
 4. Confirm `<vault>/.obsidian/hermes/runtime/<tab-id>.json` updates during a Hermes turn.
 5. Disable and re-enable Hermes Console, or restart Obsidian, after changing plugin files.
+
+If PDF selections stay out of Hermes:
+
+1. Confirm the PDF is open in Obsidian's own viewer; an external viewer cannot feed the bridge.
+2. Select text inside a page and check the console header: `PDF p.…` means the snapshot was taken, a note label means the last selection was in a note.
+3. `@pdf:` needs poppler - `which pdftotext pdfinfo`. Without it, references answer that no text layer was found.
 
 Do not install another Obsidian plugin. There is only one Obsidian plugin: Hermes Console.

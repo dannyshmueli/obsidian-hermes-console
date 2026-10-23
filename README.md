@@ -140,6 +140,9 @@ End-to-end selected-text/cursor behavior requires all three pieces: Obsidian cap
 - Context is captured at submit time, not pasted into the terminal, so multi-line selections do not break prompt entry.
 - The terminal process receives `OBSIDIAN_CONTEXT_BRIDGE_PATH` so the `obsidian-context-bridge` Hermes plugin can read the right vault bridge file
 - Large selections can stay out of the prompt body and be fetched by Hermes through `obsidian_context()`
+- PDF views work the same way: open a PDF in Obsidian's viewer, turn on the toggle for the tab, select text, and press Enter. The header shows the page (`PDF p.84 (19 chars)`) and Hermes receives the text with its page number
+- Only the most recent selection is attached, so switching between a note and a PDF attaches whichever you selected last
+- For whole pages instead of a selection, ask Hermes with a `@pdf:` reference in the prompt - `@pdf:paper.pdf:84-86` for a page range, or `@pdf:current:85-90` for the PDF you are reading (needs `pdftotext`/`pdfinfo` from poppler)
 
 ## Installation
 
