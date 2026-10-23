@@ -2,9 +2,9 @@
 
 Hermes Console uses one Obsidian plugin and one Hermes plugin, connected by local JSON files inside your vault.
 
-The Obsidian plugin is **Hermes Console**. It owns the terminal UI, tabs, PTY sessions, per-tab selected-note/cursor capture, and the busy/idle tab indicators.
+The Obsidian plugin is **Hermes Console**. It owns the terminal UI, tabs, PTY sessions, per-tab note/PDF selection and cursor capture, and the busy/idle tab indicators.
 
-The Hermes plugin is **obsidian-context-bridge**. It appears in Hermes Plugins because it runs inside Hermes. It registers Hermes hooks, injects selected-note/cursor context before the LLM call, exposes the `obsidian_context()` tool for large selections, and writes per-tab busy/idle status for the Obsidian UI.
+The Hermes plugin is **obsidian-context-bridge**. It appears in Hermes Plugins because it runs inside Hermes. It registers Hermes hooks, injects note/PDF selection or cursor context before the LLM call, exposes the `obsidian_context()` tool for large selections, and writes per-tab busy/idle status for the Obsidian UI.
 
 It is not a second Obsidian plugin.
 
@@ -19,10 +19,10 @@ Community Plugins installs the Obsidian plugin assets only. It does not install 
 5. Install and enable the Hermes-side bridge once:
 
    ```bash
-   hermes plugins install dannyshmueli/obsidian-hermes-console --enable
+   hermes plugins install dannyshmueli/obsidian-hermes-console#hermes --enable
    ```
 
-6. Open Hermes Console, enable the **Send context to Hermes** header toggle for the terminal tab you want to use, select text or put your cursor in a note, type a prompt, and press Enter.
+6. Open Hermes Console, enable the **Send context to Hermes** header toggle for the terminal tab you want to use, select text in a note or a PDF (or put your cursor in a note), type a prompt, and press Enter.
 
 Note context sharing is opt-in per Hermes Console terminal tab. The tab header toggle defaults off after plugin reload or Obsidian restart, so enable it again for each terminal tab that should share note context. You can also run **Toggle note context for active Hermes Console tab** from the command palette and bind that command under Settings > Hotkeys.
 
@@ -153,8 +153,10 @@ This replaced the older OSC/prompt-parsing experiment. Terminal output is not th
 Most users should use the one-line install:
 
 ```bash
-hermes plugins install dannyshmueli/obsidian-hermes-console --enable
+hermes plugins install dannyshmueli/obsidian-hermes-console#hermes --enable
 ```
+
+`#hermes` points at the Hermes-side plugin inside this repository (about 60 KB). `hermes plugins install dannyshmueli/obsidian-hermes-console` installs the repository root as well, but also clones the Obsidian plugin sources and the prebuilt binaries (about 36 MB), and current Hermes builds require `--force` for that form because the install scanner reports those binaries and documentation files as caution findings.
 
 Use manual install only when you run Hermes outside Hermes Console or maintain a custom Hermes profile.
 
