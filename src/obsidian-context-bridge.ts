@@ -1,5 +1,9 @@
 import type { App } from "obsidian";
 
+import { readObsidianPdfSelection } from "./obsidian-pdf-context";
+import type { ObsidianPdfSelectionMeta } from "./obsidian-pdf-context";
+import { hashText } from "./text-hash";
+
 export const OBSIDIAN_CONTEXT_BRIDGE_SCHEMA_VERSION = 1;
 export const INLINE_SELECTION_LIMIT = 4_000;
 export const LARGE_SELECTION_PREVIEW_LIMIT = 500;
@@ -75,6 +79,12 @@ export type ObsidianSelectionContext = {
   lineCount: number;
   charCount: number;
   hash: string;
+  /**
+   * Present only when the selection came from a PDF viewer. Older consumers
+   * ignore it; the page numbers are the real locator (`range` carries the
+   * page-derived line mapping for backwards compatibility).
+   */
+  pdf?: ObsidianPdfSelectionMeta;
 };
 
 export type ObsidianCursorContext = {
@@ -122,14 +132,55 @@ export type ObsidianContextToolResult =
   | ObsidianCursorContext
   | null;
 
+/** A PDF text selection captured at the moment it was made. */
+export type ObsidianPdfSnapshot = {
+  context: ObsidianSelectionContext;
+  capturedAt: number;
+};
+
 export class ObsidianContextTracker {
   private cached: MarkdownCandidate | null = null;
+  private cachedMarkdownAt = 0;
+  private cachedPdf: ObsidianPdfSnapshot | null = null;
 
+  /**
+   * Remember whatever is currently selectable.
+   *
+   * A Markdown editor keeps its selection in view state, so it can be re-read
+   * at submit time. A PDF viewer does not: its selection lives in the DOM and
+   * is gone as soon as the user clicks into the console terminal to press
+   * Enter. PDF selections therefore have to be snapshotted while they are still
+   * live - which is why this runs on every `selectionchange`, `keyup` and
+   * `pointerup` (see main.ts), not only at submit time.
+   */
   rememberFromApp(app: App): void {
-    const candidate = findActiveMarkdownCandidate(app as AppLike);
-    if (candidate && isFileAvailable(app as AppLike, candidate.file)) {
+    const appLike = app as AppLike;
+    const candidate = findActiveMarkdownCandidate(appLike);
+    if (candidate && isFileAvailable(appLike, candidate.file)) {
       this.cached = candidate;
+      this.cachedMarkdownAt = Date.now();
     }
+
+    const pdf = readObsidianPdfSelection(app, getVaultBasePath(appLike));
+    if (pdf) {
+      this.cachedPdf = { context: pdf, capturedAt: Date.now() };
+    }
+  }
+
+  /** Last PDF selection snapshot, dropped if its file no longer exists. */
+  getPdfSnapshot(app: App): ObsidianPdfSnapshot | null {
+    const snapshot = this.cachedPdf;
+    if (!snapshot) return null;
+    if (!isFileAvailable(app as AppLike, snapshot.context.file)) {
+      this.cachedPdf = null;
+      return null;
+    }
+    return snapshot;
+  }
+
+  /** When the Markdown candidate was last observed; 0 when there is none. */
+  lastMarkdownCapturedAt(): number {
+    return this.cachedMarkdownAt;
   }
 
   getCandidate(app: App): MarkdownCandidate | null {
@@ -163,7 +214,14 @@ export function buildObsidianContextBridgePayload(opts: {
   const vaultPath = getVaultBasePath(app);
   const attachEnabled = opts.attachEnabled ?? true;
   const candidate = attachEnabled ? opts.tracker.getCandidate(opts.app) : null;
-  const context = candidate ? buildContextFromCandidate(candidate, vaultPath) : null;
+  const markdownContext = candidate ? buildContextFromCandidate(candidate, vaultPath) : null;
+  const pdfSnapshot = attachEnabled ? opts.tracker.getPdfSnapshot(opts.app) : null;
+  // Whichever selection the user made most recently wins: a note selection
+  // followed by a PDF selection (and the reverse) must attach the later one.
+  const pdfWins =
+    pdfSnapshot !== null &&
+    (!markdownContext || pdfSnapshot.capturedAt >= opts.tracker.lastMarkdownCapturedAt());
+  const context = pdfWins ? pdfSnapshot.context : markdownContext;
 
   return {
     schemaVersion: OBSIDIAN_CONTEXT_BRIDGE_SCHEMA_VERSION,
@@ -307,6 +365,15 @@ export function describeObsidianContextHeaderDetails(
   if (!payload.attach.enabled) return { file: "OFF", context: "note context disabled" };
   if (!payload.context) return { file: "No Markdown context", context: "focus an Obsidian note" };
   if (payload.context.type === "selection") {
+    const pdf = payload.context.pdf;
+    if (pdf) {
+      const pages =
+        pdf.pageFrom === pdf.pageTo ? `p.${pdf.pageFrom}` : `p.${pdf.pageFrom}-${pdf.pageTo}`;
+      return {
+        file: payload.context.file.name,
+        context: `PDF ${pages} (${payload.context.charCount} chars)`,
+      };
+    }
     const fromLine = payload.context.range.from.line + 1;
     const toLine = payload.context.range.to.line + 1;
     return {
@@ -329,6 +396,12 @@ export function describeObsidianContextForHeader(
   if (!payload.attach.enabled) return "OFF";
   if (!payload.context) return "No Markdown context";
   if (payload.context.type === "selection") {
+    const pdf = payload.context.pdf;
+    if (pdf) {
+      const pages =
+        pdf.pageFrom === pdf.pageTo ? `p.${pdf.pageFrom}` : `p.${pdf.pageFrom}-${pdf.pageTo}`;
+      return `PDF ${pages} ${payload.context.file.name} (${payload.context.charCount}c)`;
+    }
     return `SEL ${payload.context.lineCount}L ${payload.context.file.name}:${payload.context.range.from.line + 1}-${payload.context.range.to.line + 1}`;
   }
   return `CUR ${payload.context.file.name}:${payload.context.cursor.line + 1}`;
@@ -663,22 +736,8 @@ function joinPath(...parts: string[]): string {
   return [first, ...rest].filter(Boolean).join("/");
 }
 
-function hashText(text: string): string {
-  let h1 = 0x811c9dc5;
-  let h2 = 0x811c9dc5 ^ 0x9e3779b9;
-  for (let i = 0; i < text.length; i++) {
-    const code = text.charCodeAt(i);
-    h1 ^= code;
-    h1 = Math.imul(h1, 0x01000193);
-    h2 ^= code + i;
-    h2 = Math.imul(h2, 0x01000193);
-  }
-  return `${toHex32(h1)}${toHex32(h2)}`;
-}
-
-function toHex32(value: number): string {
-  return (value >>> 0).toString(16).padStart(8, "0");
-}
+// `hashText` lives in ./text-hash so the PDF capture path can reuse it without
+// a circular import.
 
 function getRuntimeRequire(): NodeRequire {
   const winRequire = typeof window !== "undefined"
