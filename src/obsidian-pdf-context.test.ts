@@ -15,6 +15,7 @@ import {
   readObsidianPdfSelection,
   type DomSelectionLike,
 } from "./obsidian-pdf-context";
+import { countWords } from "./text-stats";
 
 /**
  * These fakes reproduce the DOM shape Obsidian's pdf.js viewer exposes, as
@@ -280,16 +281,16 @@ describe("describeObsidianContextHeaderDetails for PDF selections", () => {
   it("labels a single page and a page span", () => {
     expect(
       describeObsidianContextHeaderDetails(true, payload({ pageFrom: 84, pageTo: 84, pageCount: 1, totalPages: 90 })),
-    ).toEqual({ file: "朱坤.pdf", context: `PDF p.84 (${PDF_TEXT.length} chars)` });
+    ).toEqual({ file: "朱坤.pdf", context: `PDF p.84 (${countWords(PDF_TEXT)} words)` });
     expect(
       describeObsidianContextHeaderDetails(true, payload({ pageFrom: 82, pageTo: 84, pageCount: 3, totalPages: 90 }))
         .context,
-    ).toBe(`PDF p.82-84 (${PDF_TEXT.length} chars)`);
+    ).toBe(`PDF p.82-84 (${countWords(PDF_TEXT)} words)`);
     expect(
       describeObsidianContextForHeader(
         true,
         payload({ pageFrom: 82, pageTo: 84, pageCount: 3, totalPages: 90 }),
       ),
-    ).toBe(`PDF p.82-84 朱坤.pdf (${PDF_TEXT.length}c)`);
+    ).toBe(`PDF p.82-84 朱坤.pdf (${countWords(PDF_TEXT)}w)`);
   });
 });

@@ -6,7 +6,7 @@ All notable changes to Hermes Console are documented here.
 
 ### New
 
-- Read selections made in Obsidian's PDF viewer as Hermes context, page number included (`PDF p.33 (295 chars)` in the console header).
+- Read selections made in Obsidian's PDF viewer as Hermes context, page number included (`PDF p.33 (51 words)` in the console header).
 - Add the `@pdf:` context reference on the Hermes side, so a prompt can pull a page range out of a vault PDF on demand (`@pdf:paper.pdf:84-86`, `@pdf:current:85-90`).
 
 ## 1.1.16 - May 23, 2026

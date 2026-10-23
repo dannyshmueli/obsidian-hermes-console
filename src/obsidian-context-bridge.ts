@@ -3,6 +3,7 @@ import type { App } from "obsidian";
 import { readObsidianPdfSelection } from "./obsidian-pdf-context";
 import type { ObsidianPdfSelectionMeta } from "./obsidian-pdf-context";
 import { hashText } from "./text-hash";
+import { countWords } from "./text-stats";
 
 export const OBSIDIAN_CONTEXT_BRIDGE_SCHEMA_VERSION = 1;
 export const INLINE_SELECTION_LIMIT = 4_000;
@@ -371,7 +372,7 @@ export function describeObsidianContextHeaderDetails(
         pdf.pageFrom === pdf.pageTo ? `p.${pdf.pageFrom}` : `p.${pdf.pageFrom}-${pdf.pageTo}`;
       return {
         file: payload.context.file.name,
-        context: `PDF ${pages} (${payload.context.charCount} chars)`,
+        context: `PDF ${pages} (${countWords(payload.context.selectedText)} words)`,
       };
     }
     const fromLine = payload.context.range.from.line + 1;
@@ -400,7 +401,7 @@ export function describeObsidianContextForHeader(
     if (pdf) {
       const pages =
         pdf.pageFrom === pdf.pageTo ? `p.${pdf.pageFrom}` : `p.${pdf.pageFrom}-${pdf.pageTo}`;
-      return `PDF ${pages} ${payload.context.file.name} (${payload.context.charCount}c)`;
+      return `PDF ${pages} ${payload.context.file.name} (${countWords(payload.context.selectedText)}w)`;
     }
     return `SEL ${payload.context.lineCount}L ${payload.context.file.name}:${payload.context.range.from.line + 1}-${payload.context.range.to.line + 1}`;
   }

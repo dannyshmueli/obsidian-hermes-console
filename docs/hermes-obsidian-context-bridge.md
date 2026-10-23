@@ -99,7 +99,9 @@ The snapshot travels through the same `context.json` as a note selection, with o
 }
 ```
 
-`range` and `lineCount` are still filled from the page's text, so a Hermes-side consumer written before this field existed keeps working; `pdf` is additive, and `totalPages` is `null` when the viewer did not report a page count. The console header shows the same thing as `PDF p.33 (295 chars)`.
+`range` and `lineCount` are still filled from the page's text, so a Hermes-side consumer written before this field existed keeps working; `pdf` is additive, and `totalPages` is `null` when the viewer did not report a page count.
+
+The console header shows the page and the selection size in words (`PDF p.33 (51 words)`). The word count follows the 字数 convention Chinese word processors use rather than whitespace tokens: each CJK character counts once, each run of Latin letters/digits counts once, punctuation counts zero - a whole Chinese paragraph would otherwise read "1 word". `charCount` stays in the payload (the host budgets in characters), it is just no longer what the header prints.
 
 When a note selection and a PDF selection are both available, the more recent one wins: the tracker timestamps both and attaches whichever the user selected last.
 
