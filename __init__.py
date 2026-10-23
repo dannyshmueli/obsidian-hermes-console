@@ -78,7 +78,7 @@ def register(ctx):
             "description": "Return the latest fresh Obsidian selection or cursor context captured by Hermes Console for Obsidian.",
             "parameters": {"type": "object", "properties": {}},
         },
-        handler=lambda args, **kw: _obsidian_context(),
+        handler=lambda args, **kw: _obsidian_context_json(),
         description="Get current Obsidian context from Hermes Console bridge",
         emoji="🪽",
     )
@@ -111,6 +111,22 @@ def _obsidian_context():
     if _latest_context.get("type") == "selection":
         return {**_latest_context, "text": _latest_context.get("selectedText", "")}
     return _latest_context
+
+
+def _obsidian_context_json() -> str:
+    """Tool-handler wrapper: Hermes plugin tools must return a JSON string.
+
+    ``tools/registry.py::_normalize_handler_result`` converts any non-string
+    result into a string error, so a dict - a selection, a cursor context, or the
+    structured "no context" answer - has to be serialized here. Without this the
+    tool answered ``unsupported result type: dict`` whenever it did have
+    something to return.
+    """
+    try:
+        return json.dumps(_obsidian_context(), ensure_ascii=False)
+    except Exception as exc:  # a serialization bug must never break the turn
+        logger.warning("obsidian-context-bridge: failed to serialize context: %s", exc)
+        return json.dumps({"context": None, "reason": "serialization_error", "detail": str(exc)})
 
 
 def _read_and_consume():

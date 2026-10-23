@@ -132,6 +132,8 @@ class ObsidianHermesBridge {
     };
   }
 
+  // Returns an object; the Python tool handler serializes it because Hermes
+  // plugin tools must return strings (the mirror is not registered with Hermes).
   obsidian_context() {
     if (this.latestContext && !this.isTimestampFresh(this.latestUpdateTimestamp)) {
       this.latestContext = null;

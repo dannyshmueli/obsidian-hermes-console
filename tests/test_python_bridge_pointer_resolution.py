@@ -234,6 +234,22 @@ class BridgePointerResolutionTests(unittest.TestCase):
         # freshness window, which is why the reason lives in the diagnosis only.
         self.assertEqual(self.mod._obsidian_context()["text"], "hello")
 
+    def test_tool_handler_returns_a_json_string(self):
+        # Hermes plugin tools must return strings (tools/registry.py); the
+        # wrapper is what the host calls, so it has to serialize every shape.
+        self.assertIsNone(self.mod._read_and_consume())
+        parsed = json.loads(self.mod._obsidian_context_json())
+        self.assertIsNone(parsed["context"])
+        self.assertEqual(parsed["reason"], "bridge_path_unset")
+
+        vault = self.root / "V.vault"
+        write_bridge(vault, "json string path")
+        write_pointer(self.pointer, [pointer_entry(vault, updated_at=int(time.time() * 1000))])
+        self.mod._read_and_consume()
+        serialized = self.mod._obsidian_context_json()
+        self.assertIsInstance(serialized, str)
+        self.assertEqual(json.loads(serialized)["text"], "json string path")
+
     # ----------------------------------------------------------- end to end
     def test_selection_reaches_obsidian_context_through_the_pointer_file(self):
         vault = self.root / "V.vault"
