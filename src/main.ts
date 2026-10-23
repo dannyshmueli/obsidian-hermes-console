@@ -15,6 +15,7 @@ import { notifyProtocolHandlerError, validateProtocolCwd } from "./uri-cwd";
 import type { SavedViewState } from "./session-state";
 import type { TerminalTabManager } from "./terminal-tab-manager";
 import { ObsidianContextTracker } from "./obsidian-context-bridge";
+import { removeBridgePointerEntrySync } from "./obsidian-bridge-pointer";
 import { getLeafForTerminalLocation } from "./terminal-opener";
 import {
   HERMES_ICON_ID,
@@ -238,6 +239,16 @@ export default class TerminalPlugin extends Plugin {
     }
     this.themeObserver?.disconnect();
     this.themeObserver = null;
+
+    // Drop this vault's pointer entry: the next Hermes turn may belong to a
+    // different vault, and a closed vault should stop advertising itself.
+    // Best-effort, like every other pointer write.
+    try {
+      const adapter = this.app.vault.adapter as FileSystemAdapter;
+      removeBridgePointerEntrySync(adapter.getBasePath());
+    } catch {
+      // no desktop adapter: nothing to prune
+    }
 
     // Detach after a tick to avoid disrupting the settings modal
     window.setTimeout(() => {

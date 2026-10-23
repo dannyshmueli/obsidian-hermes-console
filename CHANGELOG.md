@@ -4,6 +4,11 @@ All notable changes to Hermes Console are documented here.
 
 ## Unreleased
 
+### New
+
+- Publish the active vault's bridge path to a vault-independent pointer file (`~/.config/hermes-console/bridge.json`), so a Hermes process that never inherited the PTY environment (gateway/service, container, remote backend, cron turn) still finds the right vault. Resolution order on the Hermes side: env var, pointer file, working-directory scan, legacy path.
+- Report why there is no Obsidian context: `obsidian_context()` now answers with `reason`, the resolved bridge path, its source, the paths that were checked, and a hint, instead of a bare `null`; the plugin also logs each new reason once.
+
 ## 1.1.16 - May 23, 2026
 
 ### Improvements
