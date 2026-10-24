@@ -32,7 +32,7 @@ import {
   getCloseConfirmationMessage,
   isDestructiveKillConfirmed,
 } from "./terminal-session-actions";
-import { shouldRunStartupCommandForTab } from "./startup-command";
+import { createLazyStartupGate, shouldRunStartupCommandForTab } from "./startup-command";
 import {
   createHermesHookStatusState,
   hermesHookStatusFilePath,
@@ -99,6 +99,8 @@ export interface TerminalSession {
   cwd: string;
   /** Command to run after shell spawn (e.g. "hermes --resume <session-id>"). */
   resumeCommand?: string;
+  /** Lazy-startup gate (consulted by the onData pipe before the PTY); removed once the command fired. */
+  inputGate?: (data: string) => boolean;
   /** Disposables for parser/event handlers — cleaned up on close. */
   parserDisposables: IDisposable[];
   /** Mode 2031 state for terminal color queries. */
@@ -550,6 +552,19 @@ export class TerminalTabManager {
       session.pty.write(command + "\r");
     };
 
+    if (this.settings.startupOnFirstKey) {
+      // Lazy start (#10): fire on the user's first keystroke instead of shell-ready or the
+      // 2 s fallback. No OSC handler and no timer are armed, so a tab that is opened and
+      // left untouched launches nothing at all — no Hermes boot cost and no empty Hermes
+      // session row. The gesture keystroke is swallowed so it cannot interleave with the
+      // injected command.
+      session.inputGate = createLazyStartupGate(() => {
+        run();
+        session.inputGate = undefined;
+      });
+      return;
+    }
+
     oscDisposable = terminal.parser.registerOscHandler(133, (data) => {
       if (data.startsWith("A")) run();
       return false;
@@ -948,9 +963,12 @@ export class TerminalTabManager {
         terminal.write(data);
       });
 
-      // Wire data: xterm -> PTY. Autocomplete may consume data (returns true) to
-      // prevent keypress-echoed chars from reaching the PTY while active.
+      // Wire data: xterm -> PTY. The lazy startup gate (if armed) runs first: until the
+      // startup command fires it swallows keystrokes so nothing can interleave with it.
+      // Autocomplete may consume data (returns true) to prevent keypress-echoed chars from
+      // reaching the PTY while active.
       terminal.onData((data: string) => {
+        if (session.inputGate && !session.inputGate(data)) return;
         if (!session.autocomplete?.handleData(data)) pty.write(data);
       });
 

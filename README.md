@@ -94,6 +94,7 @@ End-to-end selected-text/cursor behavior requires all three pieces: Obsidian cap
 - Full PTY terminal (not a simple command runner) with interactive shell support
 - Auto-detects your shell: PowerShell 7 / Windows PowerShell / cmd.exe on Windows, `$SHELL` on macOS/Linux
 - Startup command: fresh new tabs run `hermes` by default once the shell is ready if the Hermes CLI is installed and in PATH. Restored tabs and resume links do not re-run the startup command
+- Start on first keypress: wait for your first keystroke in a fresh tab before injecting the startup command, so a tab you open and leave untouched never launches Hermes — no boot cost and no empty "(Untitled)" session left in Hermes. Off by default
 - Clipboard support: Ctrl+V / Cmd+V paste, Ctrl+C / Cmd+C copy (with selection)
 - Clickable URLs in terminal output
 - Auto-resize as the panel resizes
