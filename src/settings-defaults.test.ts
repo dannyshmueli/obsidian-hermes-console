@@ -91,4 +91,8 @@ describe("startup command gating", () => {
     expect(shouldRunStartupCommandForTab({ bufferSerial: "previous output" })).toBe(false);
     expect(shouldRunStartupCommandForTab({ resumeCommand: "hermes --resume 20260517_103803_4b6c9d" })).toBe(false);
   });
+
+  it("defaults lazy start off so existing behavior is unchanged", () => {
+    expect(DEFAULT_SETTINGS.startupOnFirstKey).toBe(false);
+  });
 });

@@ -25,6 +25,8 @@ export type WikiLinkInsertMode = "wikilink" | "vault-path" | "absolute-path";
 export interface TerminalPluginSettings {
   shellPath: string;
   startupCommand: string;
+  /** Wait for the first keystroke in a fresh tab before injecting the startup command (#10). */
+  startupOnFirstKey: boolean;
   fontSize: number;
   fontFamily: string;
   lineHeight: number;
@@ -58,6 +60,7 @@ export interface TerminalPluginSettings {
 export const DEFAULT_SETTINGS: TerminalPluginSettings = {
   shellPath: "",
   startupCommand: "hermes",
+  startupOnFirstKey: false,
   fontSize: 14,
   fontFamily: "Menlo, Monaco, 'Courier New', monospace",
   lineHeight: 1.0,
@@ -421,6 +424,16 @@ export class TerminalSettingTab extends PluginSettingTab {
             this.plugin.settings.startupCommand = value;
             await this.plugin.saveSettings();
           })
+      );
+
+    new Setting(containerEl)
+      .setName("Start on first keypress")
+      .setDesc("Wait for your first keystroke in a fresh tab before injecting the startup command. A tab you open and leave untouched never launches it — no boot cost and no empty \"(Untitled)\" session left in Hermes. The keystroke that starts it is swallowed. Existing tabs keep their current behavior; applies to tabs opened afterwards.")
+      .addToggle((toggle) =>
+        toggle.setValue(this.plugin.settings.startupOnFirstKey).onChange(async (value) => {
+          this.plugin.settings.startupOnFirstKey = value;
+          await this.plugin.saveSettings();
+        })
       );
 
 
