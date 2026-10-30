@@ -924,6 +924,36 @@ body.terminal-tab-bar-resizing {
   padding: 14px 16px;
 }
 
+/*
+ * xterm's DOM renderer measures glyph width in-page, then sets its own
+ * letter-spacing on .xterm-rows to lock the cell grid. Letter-spacing inherited
+ * from Obsidian or a theme is baked into that measurement and then replaced at
+ * paint time, so a full row grows by a fraction of a pixel per cell. The row
+ * box is exactly cols × cell width with overflow hidden, which cuts off the
+ * last one to three characters. Wide characters stay double-width; fitting
+ * fewer columns does not remove the per-cell drift.
+ *
+ * Measure against a zero baseline, and let row text inherit xterm's inline
+ * letter-spacing (including its per-glyph correction) instead of an ancestor's.
+ * Leave row overflow hidden so glyphs cannot paint over the next row or force
+ * a horizontal scrollbar.
+ */
+.terminal-session,
+.terminal-session .xterm,
+.terminal-session .xterm-char-measure-element,
+.terminal-session .xterm-width-cache-measure-container {
+  letter-spacing: 0;
+  font-kerning: none;
+  font-variant-ligatures: none;
+}
+
+.terminal-session .xterm-rows > div,
+.terminal-session .xterm-rows span {
+  letter-spacing: inherit;
+  font-kerning: none;
+  font-variant-ligatures: none;
+}
+
 /* Session fills host */
 .terminal-session {
   position: absolute;
