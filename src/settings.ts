@@ -37,6 +37,12 @@ export interface TerminalPluginSettings {
   defaultLocation: "bottom" | "right" | "tab" | "split-right";
   /** Obsidian Notice when Hermes finishes in a non-active console tab. */
   notifyOnHermesIdleInBackground: boolean;
+  /**
+   * Send the terminal EOF byte (Ctrl+D) before hard-killing the PTY on tab
+   * close, so the Hermes session inside the tab exits through its own
+   * graceful path and ends in the gateway's session list (upstream issue #12).
+   */
+  gracefulHermesExit: boolean;
   notificationSound: NotificationSound;
   notificationVolume: number;
   searchShortcut: string;
@@ -69,6 +75,7 @@ export const DEFAULT_SETTINGS: TerminalPluginSettings = {
   ribbonIcon: HERMES_ICON_ID,
   defaultLocation: "right",
   notifyOnHermesIdleInBackground: true,
+  gracefulHermesExit: true,
   notificationSound: "beep",
   notificationVolume: 50,
   searchShortcut: "Ctrl+Alt+F",
@@ -769,6 +776,19 @@ export class TerminalSettingTab extends PluginSettingTab {
       .addToggle((toggle) =>
         toggle.setValue(this.plugin.settings.notifyOnHermesIdleInBackground).onChange(async (value) => {
           this.plugin.settings.notifyOnHermesIdleInBackground = value;
+          await this.plugin.saveSettings();
+        })
+      );
+
+    new Setting(containerEl)
+      .setName("End Hermes session on tab close (send Ctrl+D)")
+      .setDesc("Before killing the tab's terminal, send Ctrl+D so Hermes exits through its own " +
+        "exit path and its session is ended in the gateway's session list — otherwise a used " +
+        "tab leaves its session stuck idle there forever. While a Hermes turn is running the " +
+        "tab is still killed immediately (Ctrl+D would abort the turn).")
+      .addToggle((toggle) =>
+        toggle.setValue(this.plugin.settings.gracefulHermesExit).onChange(async (value) => {
+          this.plugin.settings.gracefulHermesExit = value;
           await this.plugin.saveSettings();
         })
       );

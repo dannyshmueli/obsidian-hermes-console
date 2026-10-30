@@ -41,6 +41,7 @@ import {
   type HermesHookStatusState,
 } from "./hermes-hook-status";
 import { TerminalNoteContextState } from "./terminal-note-context-state";
+import { shouldUseGracefulExitDecision, CTRL_D, GRACEFUL_EXIT_GRACE_MS } from "./graceful-exit";
 import { getContextHeaderToggleState } from "./context-header-toggle-state";
 
 const SEARCH_DECORATIONS = {
@@ -1095,10 +1096,46 @@ export class TerminalTabManager {
     session.hermesHookStatus.watchHandle = null;
     for (const d of session.parserDisposables) d.dispose();
     session.parserDisposables = [];
-    session.pty.kill();
+    this.teardownPty(session);
     session.terminal.dispose();
     session.containerEl.remove();
     session.dragLabel.remove();
+  }
+
+  /**
+   * End the child process behind a tab.
+   *
+   * With `gracefulHermesExit` on and no Hermes turn mid-flight, send the
+   * terminal EOF byte (Ctrl+D) first and *not* kill: the child — most
+   * importantly `hermes` — routes the EOF through its own exit path, which is
+   * the only path that ends its gateway session cleanly (upstream issue #12:
+   * external SIGHUP kills leave every closed tab's session parked `idle`
+   * forever). The existing `pty.onExit` → `forceCloseTab` wiring already
+   * tolerates this: the caller of `teardownSession` splices the session out
+   * right after us, so the late exit event finds nothing to close.
+   *
+   * A hard `kill()` still runs after `GRACEFUL_EXIT_GRACE_MS` when the process
+   * did not leave (shells stuck on a foreground job behave today-identically).
+   * A busy Hermes turn (`hermesBusy`) keeps today's behaviour: Ctrl+D would
+   * abort the running turn, so the tab is hard-killed instead.
+   */
+  private teardownPty(session: TerminalSession): void {
+    if (shouldUseGracefulExitDecision({
+      gracefulHermesExit: this.settings.gracefulHermesExit,
+      hermesBusy: session.hermesBusy,
+    })) {
+      try {
+        // The child dies on EOF (shell) or through the TUI's exit path
+        // (Hermes); fall back to the hard kill only if neither happens.
+        session.pty.write(CTRL_D);
+        window.setTimeout(() => session.pty.kill(), GRACEFUL_EXIT_GRACE_MS);
+      } catch {
+        // PTY died before we could write; fall through to the hard kill.
+        session.pty.kill();
+      }
+    } else {
+      session.pty.kill();
+    }
   }
 
   // Used by the PTY exit handler. Bypasses the pin guard intentionally: pinning
