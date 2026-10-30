@@ -28,6 +28,10 @@ import {
   type ObsidianContextBridgePayload,
 } from "./obsidian-context-bridge";
 import {
+  buildBridgePointerEntry,
+  recordBridgePointerEntrySync,
+} from "./obsidian-bridge-pointer";
+import {
   getCloseButtonAction,
   getCloseConfirmationMessage,
   isDestructiveKillConfirmed,
@@ -423,11 +427,37 @@ export class TerminalTabManager {
 
     try {
       writeObsidianContextBridgePayloadSync(payload);
+      // Keep the vault-independent pointer file in step with the bridge file:
+      // it is what lets a Hermes process that never inherited the PTY
+      // environment find this vault with no per-user configuration.
+      this.recordBridgePointer(session);
       this.renderContextHeader();
     } catch (err) {
       console.error("Terminal: failed to write Obsidian Hermes context bridge", err);
       new Notice("Failed to write Obsidian context for Hermes.");
     }
+  }
+
+  /**
+   * Publish this vault's bridge path to the vault-independent pointer file
+   * (`<config home>/hermes-console/bridge.json`).
+   *
+   * Environment variables handed to the PTY only reach processes that inherit
+   * them, and a Hermes turn served by a gateway/service/remote process inherits
+   * nothing. The pointer file closes that gap with zero configuration and is
+   * deliberately best-effort: a failed write costs the discovery short-cut,
+   * never note-context submission itself.
+   */
+  private recordBridgePointer(session: TerminalSession): void {
+    recordBridgePointerEntrySync(
+      buildBridgePointerEntry({
+        app: this.app,
+        tabId: session.id,
+        tabTitle: session.name,
+        submitSequence: this.contextSubmitSequence,
+        now: new Date(),
+      }),
+    );
   }
 
   private buildObsidianContextPreviewPayload(): ObsidianContextBridgePayload | null {
@@ -926,6 +956,12 @@ export class TerminalTabManager {
         terminal.write("Go to Settings → Hermes Console to download them.\r\n");
         return;
       }
+
+      // Publish the pointer before the shell starts. The Hermes process that
+      // ends up serving the next turn may not be a descendant of this PTY
+      // (gateway/service, container, remote backend), so discovery must not
+      // depend on the environment variables passed below.
+      this.recordBridgePointer(session);
 
       try {
         pty.spawn(this.settings.shellPath, sessionCwd, cols, rows, {

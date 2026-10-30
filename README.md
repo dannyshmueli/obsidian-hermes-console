@@ -78,7 +78,7 @@ Hermes Console has three pieces. They are separate on purpose:
 3. **Hermes plugin: `obsidian-context-bridge`**
    - Repo-provided Hermes-side plugin installed with `hermes plugins install dannyshmueli/obsidian-hermes-console --enable` and loaded by the Hermes process launched inside the terminal.
    - Appears in Hermes Plugins as `obsidian-context-bridge`; that is correct. It is not a second Obsidian plugin.
-   - Reads `OBSIDIAN_CONTEXT_BRIDGE_PATH` or an explicit bridge path.
+   - Finds the bridge file through `OBSIDIAN_CONTEXT_BRIDGE_PATH` when it inherited the PTY environment, and otherwise through the pointer file, a scan from the working directory, or the historical `~/wiki` path (see **Hermes Context Bridge** below).
    - Uses Hermes hooks to inject the current selected-text/cursor context into the active Hermes turn, expose `obsidian_context()` for large selections, and write busy/idle status for the matching terminal tab.
 
 So: **this is not two Obsidian plugins.** It is one Obsidian plugin plus one Hermes plugin connected by one JSON bridge file.
@@ -139,6 +139,8 @@ End-to-end selected-text/cursor behavior requires all three pieces: Obsidian cap
 - When enabled, selection wins when text is selected; if nothing is selected, Hermes Console sends cursor/file context with the current note location and nearby lines.
 - Context is captured at submit time, not pasted into the terminal, so multi-line selections do not break prompt entry.
 - The terminal process receives `OBSIDIAN_CONTEXT_BRIDGE_PATH` so the `obsidian-context-bridge` Hermes plugin can read the right vault bridge file
+- The active vault's bridge path is also published to `~/.config/hermes-console/bridge.json`, so a Hermes turn served by a process that never inherited that variable — a gateway/service, a container, a remote backend, a cron turn — still finds the current vault with no configuration
+- When there is no context to inject, `obsidian_context()` says why (`reason`, the bridge path it resolved, where it came from, and the paths it checked) instead of returning an empty result
 - Large selections can stay out of the prompt body and be fetched by Hermes through `obsidian_context()`
 
 ## Installation

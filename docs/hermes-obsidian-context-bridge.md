@@ -1,6 +1,6 @@
 # Hermes Obsidian context bridge
 
-Hermes Console uses one Obsidian plugin and one Hermes plugin, connected by local JSON files inside your vault.
+Hermes Console uses one Obsidian plugin and one Hermes plugin, connected by local JSON files: a per-vault bridge file inside your vault, plus a vault-independent pointer file that tells the Hermes plugin which vault that is.
 
 The Obsidian plugin is **Hermes Console**. It owns the terminal UI, tabs, PTY sessions, per-tab selected-note/cursor capture, and the busy/idle tab indicators.
 
@@ -34,7 +34,7 @@ Call it the **Hermes plugin** or **Hermes companion plugin** when explaining the
 
 It is dashboard-only/no-UI in Hermes because its job is not to render a tab. Its job is to:
 
-- read `<vault>/.obsidian/hermes/context.json`
+- read `<vault>/.obsidian/hermes/context.json` (found through `OBSIDIAN_CONTEXT_BRIDGE_PATH`, the pointer file below, or a scan from the working directory)
 - inject fresh selected-text or cursor context before the LLM call
 - expose `obsidian_context()` for large selections
 - write `<vault>/.obsidian/hermes/runtime/<tab-id>.json` so Hermes Console can show busy/idle tab state
@@ -45,9 +45,17 @@ It is dashboard-only/no-UI in Hermes because its job is not to render a tab. Its
 Obsidian note selection/cursor
   -> Hermes Console Obsidian plugin
   -> <vault>/.obsidian/hermes/context.json
-  -> OBSIDIAN_CONTEXT_BRIDGE_PATH
   -> obsidian-context-bridge Hermes plugin
   -> current Hermes turn
+```
+
+The Hermes plugin locates the bridge file in this order:
+
+```text
+OBSIDIAN_CONTEXT_BRIDGE_PATH            (inherited from the PTY Hermes Console spawns)
+  -> <config home>/hermes-console/bridge.json   (pointer file; works in any process)
+  -> working-directory scan               (vault at or above the cwd, or a sibling *.vault)
+  -> ~/wiki/.obsidian/hermes/context.json (historical fallback)
 ```
 
 Busy/idle status uses a second local JSON side channel:
@@ -78,6 +86,40 @@ When note context sharing is off for that terminal tab, the marker has:
 ```
 
 Hermes consumers must treat that as a fresh detach and clear any previously accepted selected text.
+
+## Bridge pointer file
+
+`OBSIDIAN_CONTEXT_BRIDGE_PATH` is inherited only inside the process tree Hermes Console spawns. When the turn is served by a process that never inherited it - a Hermes gateway running as a service, a container, a remote/SSH backend, or a turn started by cron or a webhook - the variable is simply absent, and no hard-coded fallback can know which vault is active.
+
+Hermes Console therefore also publishes the active vault's bridge path to a fixed, vault-independent location:
+
+```text
+$XDG_CONFIG_HOME/hermes-console/bridge.json      (default: ~/.config/hermes-console/bridge.json)
+```
+
+```json
+{
+  "schemaVersion": 1,
+  "source": "hermes-console",
+  "updatedAt": "2026-10-23T09:40:00.000Z",
+  "entries": [
+    {
+      "vaultPath": "/path/to/vault",
+      "configDir": ".obsidian",
+      "tabId": "terminal-2",
+      "tabTitle": "Hermes 1",
+      "bridgePath": "/path/to/vault/.obsidian/hermes/context.json",
+      "updatedAt": "2026-10-23T09:40:00.000Z",
+      "updateTimestamp": 1792744486400,
+      "submitSequence": 15
+    }
+  ]
+}
+```
+
+Keyed by `vaultPath` (the bridge file is per vault, not per tab), newest first, capped at 16 entries. It is written when a terminal tab spawns, refreshed on every submit, and pruned when the vault unloads. Writes are atomic (temp file + rename), and the Hermes side picks the entry with the newest `updateTimestamp`. The pointer file is additive: a Hermes process that already inherits the environment variable is unaffected, and the file is never consulted before the variable.
+
+Because one pointer file serves every vault, several vaults can be listed at once - useful when a setup runs several vaults that share a single Obsidian config folder (`_obsidian` style), since each still contributes exactly one entry.
 
 ## Busy/idle status files
 
@@ -133,11 +175,20 @@ OBSIDIAN_CONTEXT_BRIDGE_PATH=/path/to/vault/.obsidian/hermes/context.json
 
 For tab busy/idle state, the Hermes process must receive the `OBSIDIAN_HERMES_*` variables listed above.
 
-Hermes Console sets these environment variables automatically for terminal sessions it launches.
+Hermes Console sets these environment variables automatically for terminal sessions it launches, and they are inherited **only by processes that descend from that shell**. If your turns are served by a long-lived gateway or another supervised process, set the path explicitly in that process's environment. For a Hermes profile that means `$HERMES_HOME/.env`:
+
+```bash
+# $HERMES_HOME/.env
+OBSIDIAN_CONTEXT_BRIDGE_PATH=/path/to/vault/.obsidian/hermes/context.json
+```
+
+Hermes reloads `.env` per turn, so `/reload` inside the session (or a new session) is enough. With the pointer file above this is no longer needed for the normal case; keep it for pinned setups and for pointing Hermes at a specific vault by hand.
 
 ## Runtime behavior
 
-- Missing or unreadable context bridge file: no context injected; `obsidian_context()` returns null.
+- The `obsidian_context()` tool answers with a JSON **string** (Hermes plugin tools must return strings, see `tools/registry.py::_normalize_handler_result`); parse it to read `context`, `reason`, `text` and the rest.
+- Missing or unreadable context bridge file: no context injected; `obsidian_context()` answers with a structured result instead of `null`:
+  `{"context": null, "reason": "bridge_path_unset", "bridge_path": null, "bridge_source": null, "checked_paths": [...], "hint": "..."}`. Possible reasons: `no_turn_yet`, `bridge_path_unset`, `bridge_unreadable`, `bridge_not_an_object`, `payload_invalid`, `payload_stale`, `payload_older_than_accepted`, `payload_already_consumed`, `attach_disabled`, `no_context_in_payload`, `stale`. The plugin logs each new reason once, so a silent no-op shows up in the Hermes log.
 - `attach.enabled=false`: no context injected; previously accepted context is cleared. This is the default after plugin reload or Obsidian restart until the user enables the tab's **Send context to Hermes** header toggle or runs **Toggle note context for active Hermes Console tab**.
 - Selection context: small selections are injected inline as serialized text.
 - Large selections: Hermes gets a preview and can call `obsidian_context()` for the full text.
@@ -150,12 +201,13 @@ Hermes Console sets these environment variables automatically for terminal sessi
 
 If Obsidian writes the bridge file but Hermes does not see context:
 
-1. Confirm Hermes was launched from Hermes Console, not an unrelated external terminal.
-2. Confirm the Hermes Plugins screen shows `obsidian-context-bridge` enabled.
-3. Confirm the terminal environment contains `OBSIDIAN_CONTEXT_BRIDGE_PATH`.
-4. Confirm `<vault>/.obsidian/hermes/context.json` updates when you press Enter.
-5. Confirm the **Send context to Hermes** header toggle is on for the active terminal tab, or run **Toggle note context for active Hermes Console tab** from the command palette.
-6. Restart Hermes Console after changing plugin settings or binaries.
+1. Confirm the Hermes Plugins screen shows `obsidian-context-bridge` enabled.
+2. Ask for the reason: call `obsidian_context()`. `reason: "bridge_path_unset"` means no bridge file was found at all; `payload_stale` means the bridge file is older than the two-minute window (press Enter in the console and retry); `attach_disabled` means the tab's **Send context to Hermes** toggle is off.
+3. Confirm the pointer file lists your vault: `cat "${XDG_CONFIG_HOME:-$HOME/.config}/hermes-console/bridge.json"`.
+4. If the turn runs outside Hermes Console (gateway, service, container), check that process: `env | grep OBSIDIAN_`, and set `OBSIDIAN_CONTEXT_BRIDGE_PATH` explicitly when it is empty (see Manual installation).
+5. Confirm `<vault>/.obsidian/hermes/context.json` updates when you press Enter.
+6. Confirm the **Send context to Hermes** header toggle is on for the active terminal tab, or run **Toggle note context for active Hermes Console tab** from the command palette.
+7. Restart Hermes Console after changing plugin settings or binaries.
 
 If the tab spinner or background-finished notice does not work:
 
