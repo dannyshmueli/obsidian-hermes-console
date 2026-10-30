@@ -4,6 +4,10 @@ All notable changes to Hermes Console are documented here.
 
 ## Unreleased
 
+### Fixed
+
+- Closing a console tab now (by default) sends the terminal EOF byte (Ctrl+D) before the hard kill, so the Hermes CLI inside the tab exits through its own graceful path and ends its session in the gateway's session list. Previously every used-then-closed tab left its session stuck `idle` there forever (upstream issue #12). The **End Hermes session on tab close (send Ctrl+D)** setting controls this; a mid-flight Hermes turn still ends with the immediate hard kill so no turn is aborted.
+
 ## 1.1.16 - May 23, 2026
 
 ### Improvements
