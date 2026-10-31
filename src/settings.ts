@@ -38,9 +38,10 @@ export interface TerminalPluginSettings {
   /** Obsidian Notice when Hermes finishes in a non-active console tab. */
   notifyOnHermesIdleInBackground: boolean;
   /**
-   * Send the terminal EOF byte (Ctrl+D) before hard-killing the PTY on tab
-   * close, so the Hermes session inside the tab exits through its own
-   * graceful path and ends in the gateway's session list (upstream issue #12).
+   * When hook status confirms Hermes is the foreground program and idle, send
+   * Ctrl+D before hard-killing the PTY so the session ends in the gateway
+   * list (upstream issue #12). Other foreground programs, a busy turn, and a
+   * missing or stale status keep the immediate hard kill.
    */
   gracefulHermesExit: boolean;
   notificationSound: NotificationSound;
@@ -782,10 +783,13 @@ export class TerminalSettingTab extends PluginSettingTab {
 
     new Setting(containerEl)
       .setName("End Hermes session on tab close (send Ctrl+D)")
-      .setDesc("Before killing the tab's terminal, send Ctrl+D so Hermes exits through its own " +
-        "exit path and its session is ended in the gateway's session list — otherwise a used " +
-        "tab leaves its session stuck idle there forever. While a Hermes turn is running the " +
-        "tab is still killed immediately (Ctrl+D would abort the turn).")
+      .setDesc("When hook status confirms Hermes is the foreground program and idle, send Ctrl+D " +
+        "so it exits on its own and leaves the gateway session list. A shell, vim, Python, or " +
+        "other foreground program, a missing or stale status, and a busy turn are killed " +
+        "immediately — the same hard kill as before, which does not keep a running turn. Hermes " +
+        "ignores Ctrl+D when the composer has an unsent draft; the terminal is then force-killed " +
+        "and that session can stay listed. Destructively killing a terminal, and unloading the " +
+        "plugin, always kill immediately.")
       .addToggle((toggle) =>
         toggle.setValue(this.plugin.settings.gracefulHermesExit).onChange(async (value) => {
           this.plugin.settings.gracefulHermesExit = value;
