@@ -37,6 +37,13 @@ export interface TerminalPluginSettings {
   defaultLocation: "bottom" | "right" | "tab" | "split-right";
   /** Obsidian Notice when Hermes finishes in a non-active console tab. */
   notifyOnHermesIdleInBackground: boolean;
+  /**
+   * When hook status confirms Hermes is the foreground program and idle, send
+   * Ctrl+D before hard-killing the PTY so the session ends in the gateway
+   * list (upstream issue #12). Other foreground programs, a busy turn, and a
+   * missing or stale status keep the immediate hard kill.
+   */
+  gracefulHermesExit: boolean;
   notificationSound: NotificationSound;
   notificationVolume: number;
   searchShortcut: string;
@@ -69,6 +76,7 @@ export const DEFAULT_SETTINGS: TerminalPluginSettings = {
   ribbonIcon: HERMES_ICON_ID,
   defaultLocation: "right",
   notifyOnHermesIdleInBackground: true,
+  gracefulHermesExit: true,
   notificationSound: "beep",
   notificationVolume: 50,
   searchShortcut: "Ctrl+Alt+F",
@@ -769,6 +777,22 @@ export class TerminalSettingTab extends PluginSettingTab {
       .addToggle((toggle) =>
         toggle.setValue(this.plugin.settings.notifyOnHermesIdleInBackground).onChange(async (value) => {
           this.plugin.settings.notifyOnHermesIdleInBackground = value;
+          await this.plugin.saveSettings();
+        })
+      );
+
+    new Setting(containerEl)
+      .setName("End Hermes session on tab close (send Ctrl+D)")
+      .setDesc("When hook status confirms Hermes is the foreground program and idle, send Ctrl+D " +
+        "so it exits on its own and leaves the gateway session list. A shell, vim, Python, or " +
+        "other foreground program, a missing or stale status, and a busy turn are killed " +
+        "immediately — the same hard kill as before, which does not keep a running turn. Hermes " +
+        "ignores Ctrl+D when the composer has an unsent draft; the terminal is then force-killed " +
+        "and that session can stay listed. Destructively killing a terminal, and unloading the " +
+        "plugin, always kill immediately.")
+      .addToggle((toggle) =>
+        toggle.setValue(this.plugin.settings.gracefulHermesExit).onChange(async (value) => {
+          this.plugin.settings.gracefulHermesExit = value;
           await this.plugin.saveSettings();
         })
       );

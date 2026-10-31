@@ -37,10 +37,21 @@ import {
   createHermesHookStatusState,
   hermesHookStatusFilePath,
   readHermesHookBusyStatus,
+  readHermesHookExitStatus,
   resolveHermesHookStatusDir,
+  type HermesHookExitStatus,
   type HermesHookStatusState,
 } from "./hermes-hook-status";
 import { TerminalNoteContextState } from "./terminal-note-context-state";
+import {
+  CTRL_D,
+  GRACEFUL_EXIT_GRACE_MS,
+  GRACEFUL_EXIT_REFUSED_NOTICE,
+  isConfirmedForegroundHermes,
+  readUnixProcessInfo,
+  shouldUseGracefulExitDecision,
+  type UnixProcessInfo,
+} from "./graceful-exit";
 import { getContextHeaderToggleState } from "./context-header-toggle-state";
 
 const SEARCH_DECORATIONS = {
@@ -107,6 +118,16 @@ export interface TerminalSession {
   pinned: boolean;
   /** True while an embedded Hermes turn is actively running. */
   hermesBusy: boolean;
+  /** Set once the PTY process has exited. A later kill can hit a reused pid. */
+  ptyExited: boolean;
+  /** Grace-period hard kill after Ctrl+D. Null when none is armed. */
+  graceKillTimer: number | null;
+  /** True once kill() has been requested, so a late timer cannot signal again. */
+  ptyKillRequested: boolean;
+  /** True once UI teardown has started. */
+  tornDown: boolean;
+  /** When true, PTY output must not be written into the terminal. */
+  ptyOutputDetached: boolean;
   /** True after Hermes finishes in a background tab until the user views it. */
   hermesUnread: boolean;
   /** Per-tab file bridge used by the Hermes hook plugin status experiment. */
@@ -335,6 +356,11 @@ export class TerminalTabManager {
   private sessionCounter = 0;
   private contextSubmitSequence = 0;
   private dragSrcId: string | null = null;
+  /**
+   * Tabs already removed from the bar whose Ctrl+D grace kill is still armed.
+   * destroyAll kills these synchronously so they cannot outlive Obsidian.
+   */
+  private gracePending: TerminalSession[] = [];
   private readonly app: App;
   private readonly hermesHookStatusDir: string;
 
@@ -943,9 +969,11 @@ export class TerminalTabManager {
       }
 
       // Wire data: PTY -> xterm. Hermes busy/idle state is handled by the
-      // hook status bridge, not by terminal escape sequences.
+      // hook status bridge, not by terminal escape sequences. Output is
+      // dropped once teardown detaches it, including during a Ctrl+D grace
+      // window after the terminal has been disposed.
       pty.onData((data: string) => {
-        terminal.write(data);
+        this.writePtyOutput(session, data);
       });
 
       // Wire data: xterm -> PTY. Autocomplete may consume data (returns true) to
@@ -955,7 +983,7 @@ export class TerminalTabManager {
       });
 
       pty.onExit(() => {
-        this.forceCloseTab(session.id);
+        this.handlePtyExit(session);
       });
 
       // Startup/resume commands must be armed after the PTY is spawned and after
@@ -1015,6 +1043,11 @@ export class TerminalTabManager {
       mode2031: false,
       pinned: opts?.pinned ?? false,
       hermesBusy: false,
+      ptyExited: false,
+      graceKillTimer: null,
+      ptyKillRequested: false,
+      tornDown: false,
+      ptyOutputDetached: false,
       hermesUnread: false,
       hermesHookStatusPath: hermesHookStatusFilePath(this.hermesHookStatusDir, id),
       hermesHookStatus: createHermesHookStatusState(),
@@ -1080,7 +1113,49 @@ export class TerminalTabManager {
     this.requestSaveLayout?.();
   }
 
-  private teardownSession(session: TerminalSession): void {
+  private writePtyOutput(session: TerminalSession, data: string): void {
+    if (session.ptyOutputDetached || session.tornDown) return;
+    session.terminal.write(data);
+  }
+
+  private notify(message: string): void {
+    new Notice(message);
+  }
+
+  private hasPtyExited(session: TerminalSession): boolean {
+    return session.ptyExited || session.pty.hasExited === true;
+  }
+
+  private clearGraceKill(session: TerminalSession): void {
+    if (session.graceKillTimer != null) {
+      window.clearTimeout(session.graceKillTimer);
+      session.graceKillTimer = null;
+    }
+  }
+
+  private dropPendingExit(session: TerminalSession): void {
+    if (!this.gracePending) return;
+    this.gracePending = this.gracePending.filter((pending) => pending !== session);
+  }
+
+  /** Synchronous kill. No-op once the process has exited or kill was requested. */
+  private killPtyNow(session: TerminalSession): void {
+    this.clearGraceKill(session);
+    this.dropPendingExit(session);
+    if (this.hasPtyExited(session) || session.ptyKillRequested) return;
+    session.ptyKillRequested = true;
+    session.pty.kill();
+  }
+
+  /**
+   * Drop PTY output before disposing xterm. Safe to call twice.
+   * Does not signal the child — callers choose immediate kill, graceful
+   * Ctrl+D, or no kill (already exited).
+   */
+  private disposeSessionUi(session: TerminalSession): void {
+    session.ptyOutputDetached = true;
+    if (session.tornDown) return;
+    session.tornDown = true;
     this.noteContextState.remove(session.id);
     session.autocomplete?.dispose();
     if (session.hermesHookStatus.pollTimer !== null) {
@@ -1095,21 +1170,94 @@ export class TerminalTabManager {
     session.hermesHookStatus.watchHandle = null;
     for (const d of session.parserDisposables) d.dispose();
     session.parserDisposables = [];
-    session.pty.kill();
     session.terminal.dispose();
     session.containerEl.remove();
     session.dragLabel.remove();
   }
 
+  private teardownSession(session: TerminalSession, mode: "immediate" | "exited"): void {
+    if (mode === "immediate") this.killPtyNow(session);
+    else this.clearGraceKill(session);
+    this.disposeSessionUi(session);
+  }
+
+  /**
+   * Hook status for the Ctrl+D decision. Re-read at close time: `hermesBusy`
+   * starts false and stays false when the status file is missing, so the
+   * cached boolean cannot tell idle apart from unknown.
+   */
+  private readHookExitStatus(filePath: string, tabId: string): HermesHookExitStatus | undefined {
+    return readHermesHookExitStatus(filePath, tabId);
+  }
+
+  private readProcess(pid: number): UnixProcessInfo | null {
+    return readUnixProcessInfo(pid);
+  }
+
+  private wantsGracefulExit(session: TerminalSession): boolean {
+    const reading = this.readHookExitStatus(session.hermesHookStatusPath, session.id);
+    const hermesBusy = reading ? reading.busy : undefined;
+    const hermesPid = reading?.pid ?? null;
+    const shellPid = session.pty.pid;
+    const foreground = hermesPid != null && shellPid != null && shellPid > 0
+      ? isConfirmedForegroundHermes(this.readProcess(shellPid), this.readProcess(hermesPid))
+      : false;
+    return shouldUseGracefulExitDecision({
+      gracefulHermesExit: this.settings.gracefulHermesExit,
+      hermesBusy,
+      hermesForeground: foreground,
+    });
+  }
+
+  /**
+   * Send Ctrl+D and arm a hard kill. The timer is cancelled if the process
+   * exits first. If it is still alive (Hermes refused Ctrl+D, usually an
+   * unsent draft), the kill runs and does not stamp the gateway session.
+   * No kill is armed when the PTY has already exited.
+   */
+  private beginGracefulExit(session: TerminalSession): void {
+    this.disposeSessionUi(session);
+    if (this.hasPtyExited(session)) return;
+    try {
+      session.pty.write(CTRL_D);
+    } catch {
+      if (!this.hasPtyExited(session)) this.killPtyNow(session);
+      return;
+    }
+    if (this.hasPtyExited(session)) return;
+    this.clearGraceKill(session);
+    session.graceKillTimer = window.setTimeout(() => {
+      session.graceKillTimer = null;
+      if (this.hasPtyExited(session) || session.ptyKillRequested) return;
+      this.killPtyNow(session);
+      this.notify(GRACEFUL_EXIT_REFUSED_NOTICE);
+    }, GRACEFUL_EXIT_GRACE_MS);
+    if (!this.gracePending) this.gracePending = [];
+    this.gracePending.push(session);
+  }
+
+  /** PTY exit: cancel any grace kill, then remove the tab if it is still open. */
+  private handlePtyExit(session: TerminalSession): void {
+    session.ptyExited = true;
+    this.clearGraceKill(session);
+    this.dropPendingExit(session);
+    if (!session.tornDown) this.forceCloseTab(session.id);
+  }
+
   // Used by the PTY exit handler. Bypasses the pin guard intentionally: pinning
   // protects against *user-initiated* close only. When the process itself exits
-  // there is nothing left to protect, so the tab is always removed.
+  // there is nothing left to protect, so the tab is always removed. The child
+  // is already gone — do not schedule a kill.
   private forceCloseTab(id: string): void {
     const idx = this.sessions.findIndex((s) => s.id === id);
     if (idx === -1) return;
     const session = this.sessions[idx];
-    this.onSessionClose?.(this.captureSession(session));
-    this.teardownSession(session);
+    if (!session.tornDown) {
+      this.onSessionClose?.(this.captureSession(session));
+      this.teardownSession(session, "exited");
+    } else {
+      this.clearGraceKill(session);
+    }
     this.sessions.splice(idx, 1);
     if (this.activeId === id) {
       const visible = this.getVisibleSessions();
@@ -1141,7 +1289,15 @@ export class TerminalTabManager {
     }
 
     this.onSessionClose?.(this.captureSession(session));
-    this.teardownSession(session);
+    // Already exited: do not kill (the pid may have been reused). Confirmed
+    // idle foreground Hermes gets Ctrl+D. Everything else is an immediate kill.
+    if (this.hasPtyExited(session)) {
+      this.teardownSession(session, "exited");
+    } else if (this.wantsGracefulExit(session)) {
+      this.beginGracefulExit(session);
+    } else {
+      this.teardownSession(session, "immediate");
+    }
     this.sessions.splice(idx, 1);
 
     // Switch to adjacent tab if we closed the active one
@@ -1213,12 +1369,20 @@ export class TerminalTabManager {
    * (e.g. setState after onOpen's default-tab creation) to avoid polluting recents.
    */
   destroyAll(saveToRecents = true): void {
-    activeDocument.querySelector(".terminal-tab-context-menu")?.remove();
+    const doc = (globalThis as { activeDocument?: { querySelector(selectors: string): { remove(): void } | null } }).activeDocument;
+    doc?.querySelector(".terminal-tab-context-menu")?.remove();
+    if (!this.gracePending) this.gracePending = [];
+    const pending = this.gracePending.splice(0);
     for (const session of this.sessions) {
       if (saveToRecents && !session.removedFromTabs) {
         this.onSessionClose?.(this.captureSession(session));
       }
-      this.teardownSession(session);
+      // Unload and view teardown stay synchronous. Children must not outlive
+      // Obsidian waiting on a Ctrl+D grace timer.
+      this.teardownSession(session, this.hasPtyExited(session) ? "exited" : "immediate");
+    }
+    for (const session of pending) {
+      this.killPtyNow(session);
     }
     this.sessions = [];
     this.activeId = null;
@@ -1313,7 +1477,8 @@ export class TerminalTabManager {
     if (!session.removedFromTabs) {
       this.onSessionClose?.(this.captureSession(session));
     }
-    this.teardownSession(session);
+    // Explicit destructive kill is immediate, including an idle Hermes.
+    this.teardownSession(session, this.hasPtyExited(session) ? "exited" : "immediate");
     this.sessions.splice(idx, 1);
 
     if (this.activeId === id) {

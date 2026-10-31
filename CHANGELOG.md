@@ -4,6 +4,10 @@ All notable changes to Hermes Console are documented here.
 
 ## Unreleased
 
+### Fixed
+
+- Closing a console tab sends Ctrl+D when hook status confirms Hermes is the foreground program and idle, so Hermes exits through its own path and leaves the gateway session list (issue #12). A shell, vim, Python, or other foreground program, a missing or stale hook status, and a busy Hermes turn still end with the immediate hard kill — the same termination as before, which does not preserve a running turn. If Hermes ignores Ctrl+D because of an unsent draft, the grace-period hard kill still runs and that session can remain listed. **Destructively kill terminal** and plugin unload stay immediate.
+
 ## 1.1.16 - May 23, 2026
 
 ### Improvements

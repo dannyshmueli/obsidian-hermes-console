@@ -94,6 +94,8 @@ export class PtyManager {
   private nodePty: NodePtyModule | null = null;
   private pluginDir: string;
   private _shellPath: string = "";
+  /** Set on exit or kill so a later kill cannot signal a reused pid. */
+  private exited = false;
 
   constructor(pluginDir: string) {
     this.pluginDir = pluginDir;
@@ -101,6 +103,17 @@ export class PtyManager {
 
   get shellPath(): string {
     return this._shellPath;
+  }
+
+  /** Pid of the spawned shell, or null when no process is live. */
+  get pid(): number | null {
+    const pid = this.ptyProcess?.pid;
+    return typeof pid === "number" && pid > 0 ? pid : null;
+  }
+
+  /** True after the child has exited or kill() has already been requested. */
+  get hasExited(): boolean {
+    return this.exited;
   }
 
   spawn(
@@ -156,15 +169,24 @@ export class PtyManager {
   }
 
   onExit(callback: (exitInfo: { exitCode: number; signal?: number }) => void): void {
-    this.ptyProcess?.onExit(callback);
+    this.ptyProcess?.onExit((info) => {
+      this.exited = true;
+      callback(info);
+    });
   }
 
   kill(): void {
+    // node-pty keeps the pid after exit. Signaling it can hit a reused pid.
+    if (this.exited) {
+      this.ptyProcess = null;
+      return;
+    }
     try {
       this.ptyProcess?.kill();
     } catch {
       // Process may already be dead
     }
+    this.exited = true;
     this.ptyProcess = null;
   }
 
